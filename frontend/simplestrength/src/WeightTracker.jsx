@@ -21,7 +21,7 @@ function WeightTracker() {
   };
 
   return (
-    <div>
+    <div className="container">
       <h2>Track weight</h2>
 
       <input
