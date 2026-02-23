@@ -1,13 +1,15 @@
-import CalorieTracker from "./CalorieTracker"
-import "./App.css"
+import { Routes, Route } from "react-router-dom";
+import WeightTracker from "./WeightTracker";
+import CalorieTracker from "./CalorieTracker";
 
 function App() {
   return (
-    <div>
-      <h1>SimpleStrength</h1>
-      <CalorieTracker />
-    </div>
-  )
+    <Routes>
+      <Route path="/" element={<h1>Home</h1>} />
+      <Route path="/weighttracker" element={<WeightTracker />} />
+      <Route path="/Calorietracker" element={<CalorieTracker />} />
+    </Routes>
+  );
 }
 
-export default App
+export default App;
