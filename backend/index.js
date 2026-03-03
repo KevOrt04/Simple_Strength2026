@@ -21,7 +21,7 @@ app.use(express.urlencoded({ extended: true }));
 //connect to SQlite database
 const db = new sqlite3.Database(`./database.db`);
 
-// Create calories table if it doesn't exist
+// Create calories and meal table if it doesn't exist
 db.serialize(() => {
   db.run(`
     CREATE TABLE IF NOT EXISTS calories (
