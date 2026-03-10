@@ -1,13 +1,19 @@
 import { Routes, Route } from "react-router-dom";
 import WeightTracker from "./WeightTracker";
 import CalorieTracker from "./CalorieTracker";
+import MealPlanner from "./MealPlanner";
+import WorkoutCreator from "./WorkoutCreator";
+import HomePage from "./HomePage";
 
 function App() {
   return (
     <Routes>
-      <Route path="/" element={<h1>Home</h1>} />
+      <Route path="/" element={<HomePage />} />
       <Route path="/weighttracker" element={<WeightTracker />} />
-      <Route path="/Calorietracker" element={<CalorieTracker />} />
+      <Route path="/calorietracker" element={<CalorieTracker />} />
+      <Route path="/mealplanner" element={<MealPlanner />} />
+      <Route path="/workoutcreator" element={<WorkoutCreator />} />
+      <Route path="/homepage" element={<HomePage />} />
     </Routes>
   );
 }
