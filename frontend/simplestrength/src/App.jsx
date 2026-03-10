@@ -13,6 +13,7 @@ function App() {
       <Route path="/calorietracker" element={<CalorieTracker />} />
       <Route path="/mealplanner" element={<MealPlanner />} />
       <Route path="/workoutcreator" element={<WorkoutCreator />} />
+      <Route path="/homepage" element={<HomePage />} />
     </Routes>
   );
 }
