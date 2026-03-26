@@ -73,6 +73,23 @@ app.post('/calories', (req, res) => {
     }
   );
 });
+
+app.get('/calories', (req, res) => {
+  db.all(
+    `SELECT * FROM calories ORDER BY id DESC`,
+    [],
+    (err, rows) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+
+      res.json(rows);
+    }
+  );
+});
+
+
 app.post('/meals', (req, res) => {
   const { meal_name, meal_type, calories, protein, carbs, fats } = req.body;
 
