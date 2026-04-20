@@ -15,17 +15,19 @@ function WeightTracker() {
       console.log("GET route not ready yet");
     }
   };
-
+  // fetch entries when page is loaded
   useEffect(() => {
     fetchEntries();
   }, []);
 
   // POST data 
   const handleSubmit = async () => {
-    if (weight.trim() == "") {
-      alert("missing weight");
+    // Input Validation
+    if (!Number.isInteger(Number(weight)) || Number(weight) <= 0) {
+      alert("Make you enter a proper integer value for weights");
       return;
     }
+    // POSTing data if it's get implemented into backend
     try {
       const res = await fetch("http://localhost:3000/weights", {
         method: "POST",
@@ -52,10 +54,12 @@ function WeightTracker() {
     <div className="container">
       <h2>Track Weight</h2>
 
+      {/* input field for weight */}
       <input
         type="number"
         placeholder="Enter Weight"
         value={weight}
+        min="1"
         onChange={(e) => setWeight(e.target.value)}
       />
 
@@ -63,6 +67,7 @@ function WeightTracker() {
         Add
       </button>
 
+      {/* display list of entries */}
       {entries.map((entry) => (
         <p key={entry.id}>
           {entry.weight}
