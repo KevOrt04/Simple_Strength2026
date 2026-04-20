@@ -88,11 +88,14 @@ function WeightTracker() {
       </button>
 
       {/* display list of entries */}
-      {entries.map((entry) => (
-        <p key={entry.id}>
-          {entry.weight}lb(s) - {entry.date}
-        </p>
-      ))}
+      {[... entries]
+        .sort((a,b) => new Date(b.date) - new Date(a.date))
+        .map((entry) => (
+          <p key={entry.id}>
+            {entry.weight} lb(s) - {entry.date}
+          </p>
+        ))
+      }
     </div>
   );
 }
