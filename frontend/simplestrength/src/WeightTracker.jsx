@@ -70,7 +70,7 @@ function WeightTracker() {
       {/* weight input */}
       <input
         type="number"
-        placeholder="Enter Weight"
+        placeholder="Enter Weight (in lbs)"
         value={weight}
         min="1"
         onChange={(e) => setWeight(e.target.value)}
@@ -90,7 +90,7 @@ function WeightTracker() {
       {/* display list of entries */}
       {entries.map((entry) => (
         <p key={entry.id}>
-          {entry.weight} - {entry.date}
+          {entry.weight}lb(s) - {entry.date}
         </p>
       ))}
     </div>
