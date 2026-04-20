@@ -2,9 +2,15 @@
 import { useState, useEffect } from "react";
 
 function WeightTracker() {
+  // Get user's date
+  const getTodayDate = () => {
+    return new Date().toISOString().split("T")[0];
+  }
+
   const [weight, setWeight] = useState("");
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [date, setDate] = useState(getTodayDate());
   const [entries, setEntries] = useState([]);
+  const [editId, setEditId] = useState(null);
 
   // GET data
   const fetchEntries = async () => {
@@ -28,17 +34,34 @@ function WeightTracker() {
       alert("Make sure you enter a proper integer value for weights");
       return;
     }
-    // POSTing data if it's get implemented into backend
+    
+    const entryData = {
+      weight: Number(weight),
+      date: date
+    };
+
+    // Edit Mode
+    if (editId !== null) {
+      setEntries((prev) =>
+        prev.map((entry) =>
+          entry.id === editId ? { ...entry, ...entryData} : entry
+        )
+      );
+
+      setEditId(null);
+      setWeight("");
+      setDate(getTodayDate());
+      return;
+    }
+
+    // Add mode
     try {
       const res = await fetch("http://localhost:3000/weights", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({
-          weight: Number(weight),
-          date: date
-        })
+        body: JSON.stringify(entryData)
       });
 
       const result = await res.json();
@@ -52,15 +75,32 @@ function WeightTracker() {
       setEntries((prev) => [
         {
           id: Date.now(),
-          weight: Number(weight),
-          date: date
+          ...entryData
         },
         ...prev
       ]);
     }
 
     setWeight("");
-    setDate(new Date().toISOString().split("T")[0]);
+    setDate(getTodayDate());
+  }
+
+  // load entry values back into inputs
+  const handleEdit = (entry) => {
+    setWeight(String(entry.weight));
+    setDate(entry.date);
+    setEditId(entry.id);
+  }
+
+  // remove entry from local state
+  const handleDelete = (id) => {
+    setEntries((prev) => prev.filter((entry) => entry.id !== id));
+
+    if (editId === id) {
+      setEditId(null);
+      setWeight("");
+      setDate(getTodayDate());
+    }
   }
 
   // Format date entries into mm/dd/yyyy
@@ -83,7 +123,7 @@ function WeightTracker() {
         onChange={(e) => setWeight(e.target.value)}
       />
 
-      {/* weight input */}
+      {/* date input */}
       <input
         type="date"
         value={date}
@@ -91,16 +131,24 @@ function WeightTracker() {
       />
 
       <button onClick={handleSubmit}>
-        Add
+        {editId !== null ? "Save" : "Add"}
       </button>
 
       {/* display list of entries */}
       {/*entries are sorted newest to oldest by date*/}
-      {[... entries]
+      {[...entries]
         .sort((a,b) => new Date(b.date) - new Date(a.date))
         .map((entry) => (
           <p key={entry.id}>
             {entry.weight} lb(s) - {formatDate(entry.date)}
+
+            <button onClick={() => handleEdit(entry)}>
+              Edit
+            </button>
+
+            <button onClick={() => handleDelete(entry.id)}>
+              Delete
+            </button>
           </p>
         ))
       }
