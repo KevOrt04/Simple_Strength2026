@@ -63,7 +63,14 @@ function WeightTracker() {
     setDate(new Date().toISOString().split("T")[0]);
   }
 
+  // Format date entries into mm/dd/yyyy
+  const formatDate = (dateStr) => {
+    const [year, month, day] = dateStr.split("-");
+    return `${month}/${day}/${year}`;
+  };
+
   return (
+
     <div className="container">
       <h2>Track Weight</h2>
 
@@ -88,11 +95,12 @@ function WeightTracker() {
       </button>
 
       {/* display list of entries */}
+      {/*entries are sorted newest to oldest by date*/}
       {[... entries]
         .sort((a,b) => new Date(b.date) - new Date(a.date))
         .map((entry) => (
           <p key={entry.id}>
-            {entry.weight} lb(s) - {entry.date}
+            {entry.weight} lb(s) - {formatDate(entry.date)}
           </p>
         ))
       }
