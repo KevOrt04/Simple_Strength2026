@@ -10,7 +10,7 @@ function CalorieTracker() {
   const totalCalories = entries.reduce((sum, entry) => {
   return sum + Number(entry.calories);
 }, 0);
-
+//grab entries and add them
 const caloriesByDate = entries.reduce((acc, entry) => {
   const date = entry.date ? entry.date.split("T")[0] : "unknown";
 
