@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 
 function WeightTracker() {
   const [weight, setWeight] = useState("");
+  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [entries, setEntries] = useState([]);
 
   // GET data
@@ -35,7 +36,8 @@ function WeightTracker() {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          weight: Number(weight)
+          weight: Number(weight),
+          date: date
         })
       });
 
@@ -45,22 +47,40 @@ function WeightTracker() {
       await fetchEntries();
     } catch (err) {
       console.log("POST route not ready yet");
+
+      // fallback when backend not applied
+      setEntries((prev) => [
+        {
+          id: Date.now(),
+          weight: Number(weight),
+          date: date
+        },
+        ...prev
+      ]);
     }
 
     setWeight("");
+    setDate(new Date().toISOString().split("T")[0]);
   }
 
   return (
     <div className="container">
       <h2>Track Weight</h2>
 
-      {/* input field for weight */}
+      {/* weight input */}
       <input
         type="number"
         placeholder="Enter Weight"
         value={weight}
         min="1"
         onChange={(e) => setWeight(e.target.value)}
+      />
+
+      {/* weight input */}
+      <input
+        type="date"
+        value={date}
+        onChange={(e) => setDate(e.target.value)}
       />
 
       <button onClick={handleSubmit}>
@@ -70,7 +90,7 @@ function WeightTracker() {
       {/* display list of entries */}
       {entries.map((entry) => (
         <p key={entry.id}>
-          {entry.weight}
+          {entry.weight} - {entry.date}
         </p>
       ))}
     </div>
