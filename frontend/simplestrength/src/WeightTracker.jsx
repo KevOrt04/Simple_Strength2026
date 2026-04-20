@@ -24,7 +24,7 @@ function WeightTracker() {
   const handleSubmit = async () => {
     // Input Validation
     if (!Number.isInteger(Number(weight)) || Number(weight) <= 0) {
-      alert("Make you enter a proper integer value for weights");
+      alert("Make sure you enter a proper integer value for weights");
       return;
     }
     // POSTing data if it's get implemented into backend
