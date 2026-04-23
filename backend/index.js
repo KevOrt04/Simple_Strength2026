@@ -54,26 +54,44 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-app.post('/calories', (req, res) => {
-  const { food_name, calories } = req.body;
+// ==================
+// CALORIES ROUTES
+// ==================
 
-  const today = new Date().toISOString().split('T')[0];
+// CREATE
+app.post('/calories', (req, res) => {
+  const { food_name, calories, date } = req.body;
+
+  //BASIC VALIDATION
+  if (!food_name || typeof food_name !== "string" || !/^[a-zA-Z\s]+$/.test(food_name)) {
+    return res.status(400).json({ error: "Food name must contain only letters" });
+  }
+
+  if (calories === undefined || isNaN(calories) || calories <= 0 || calories > 2000) {
+    return res.status(400).json({ error: "Calories must be between 1 and 2000" });
+  }
+
+  const finalDate = date && date !== ""
+    ? date
+    : new Date().toLocaleDateString('en-CA');
 
   db.run(
     `INSERT INTO calories (food_name, calories, date)
      VALUES (?, ?, ?)`,
-    [food_name, calories, today],
-    function(err) {
+    [food_name, calories, finalDate],
+    function (err) {
       if (err) {
         console.error(err);
-        return res.status(500).json({ error: 'Database error' });
+        return res.status(500).json({ error: "Database error" });
       }
 
-      res.json({ message: 'Saved successfully' });
+      res.json({ message: "Saved successfully" });
     }
   );
 });
 
+
+// READ
 app.get('/calories', (req, res) => {
   db.all(
     `SELECT * FROM calories ORDER BY id DESC`,
@@ -89,11 +107,65 @@ app.get('/calories', (req, res) => {
   );
 });
 
+app.delete('/calories/:id', (req, res) => {
+  const { id } = req.params;
 
+  db.run(
+    `DELETE FROM calories WHERE id = ?`,
+    [id],
+    function (err) {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+
+      res.json({ message: 'Deleted successfully', id });
+    }
+  );
+});
+
+app.put('/calories/:id', (req, res) => {
+  const { id } = req.params;
+  const { food_name, calories, date } = req.body;
+
+  // SAME VALIDATION
+  if (!food_name || typeof food_name !== "string" || !/^[a-zA-Z\s]+$/.test(food_name)) {
+    return res.status(400).json({ error: "Food name must contain only letters" });
+  }
+
+  if (calories === undefined || isNaN(calories) || calories <= 0 || calories > 2000) {
+    return res.status(400).json({ error: "Calories must be between 1 and 2000" });
+  }
+
+  const finalDate = date && date !== ""
+    ? date
+    : new Date().toLocaleDateString('en-CA');
+
+  db.run(
+    `UPDATE calories 
+     SET food_name = ?, calories = ?, date = ?
+     WHERE id = ?`,
+    [food_name, calories, finalDate, id],
+    function (err) {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: "Database error" });
+      }
+
+      res.json({ message: "Updated successfully" });
+    }
+  );
+});
+
+// =============
+// MEALS ROUTES
+// =============
+
+// CREATE
 app.post('/meals', (req, res) => {
   const { meal_name, meal_type, calories, protein, carbs, fats } = req.body;
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = new Date().toLocaleDateString('en-CA');
 
   db.run(
     `INSERT INTO meals 
@@ -110,6 +182,8 @@ app.post('/meals', (req, res) => {
     }
   );
 });
+
+// READ
 app.get('/meals', (req, res) => {
   db.all(
     `SELECT * FROM meals ORDER BY date DESC`,
