@@ -22,7 +22,7 @@ function WeightTracker() {
       console.log("GET route not ready yet");
     }
   };
-  // fetch entries when page is loaded
+  // RUN on load
   useEffect(() => {
     fetchEntries();
   }, []);
@@ -155,6 +155,5 @@ function WeightTracker() {
     </div>
   );
 }
-
 
 export default WeightTracker;
