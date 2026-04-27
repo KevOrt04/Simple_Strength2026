@@ -1,4 +1,5 @@
 import { useState } from "react";
+import "./MealPlanner.css";
 
 function MealPlanner() {
   const [goal, setGoal] = useState("weight_loss");
