@@ -41,9 +41,7 @@ db.serialize(() => {
       meal_name TEXT NOT NULL,
       meal_type TEXT NOT NULL,
       calories INTEGER,
-      protein INTEGER,
-      carbs INTEGER,
-      fats INTEGER,
+     
       date TEXT NOT NULL
     )
   `);
@@ -167,15 +165,17 @@ app.put('/calories/:id', (req, res) => {
 
 // CREATE
 app.post('/meals', (req, res) => {
-  const { meal_name, meal_type, calories, protein, carbs, fats } = req.body;
+  const { meal_name, meal_type, calories, date } = req.body;
 
-  const today = getLocalDate();
+  const finalDate = date && date != ""
+  ? date
+  : getLocalDate();
 
   db.run(
     `INSERT INTO meals 
-     (meal_name, meal_type, calories, protein, carbs, fats, date)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [meal_name, meal_type, calories, protein, carbs, fats, today],
+     (meal_name, meal_type, calories, date)
+     VALUES (?, ?, ?, ?)`,
+    [meal_name, meal_type, calories, finalDate],
     function(err) {
       if (err) {
         console.error(err);
