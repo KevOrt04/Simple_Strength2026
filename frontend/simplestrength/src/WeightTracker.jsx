@@ -11,7 +11,7 @@ function WeightTracker() {
   const [date, setDate] = useState(getTodayDate());
   const [entries, setEntries] = useState([]);
   const [editId, setEditId] = useState(null);
-  const [selectedMonth, setSelectedMonth] = useState("");
+  const [selectedDate, setSelectedDate] = useState(getTodayDate());
 
   // GET data
   const fetchEntries = async () => {
@@ -110,10 +110,10 @@ function WeightTracker() {
     return `${month}/${day}/${year}`;
   };
 
-  // Filter selection by month
-  const filteredEntries = selectedMonth
-    ? entries.filter((entry) =>
-        entry.date.startsWith(selectedMonth)
+  // Filter weight entries by date
+  const filteredEntries = selectedDate
+    ? entries.filter(
+        (entry) => entry.date === selectedDate
       )
     : entries;
 
@@ -144,16 +144,17 @@ function WeightTracker() {
 
       {/* filter setting for month */}
       <div>
-        <h3>Filter by Month</h3>
-        <input
-          type="month"
-          value={selectedMonth}
-          onChange={(e) => setSelectedMonth(e.target.value)}
-        />
+        <p>Select Date: 
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+          />
 
-        <button onClick={() => setSelectedMonth("")}>
-          Show All
-        </button>
+          <button onClick={() => setSelectedDate("")}>
+            Show All
+          </button>
+        </p>
       </div>
       {/* display list of entries */}
       {/*entries are sorted newest to oldest by date*/}
