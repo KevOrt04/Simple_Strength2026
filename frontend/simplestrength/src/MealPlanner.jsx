@@ -1,173 +1,133 @@
-import { useState, useEffect } from "react";
-
+import { useState } from "react";
 
 function MealPlanner() {
-  const [mealName, setMealName] = useState("");
-  const [mealType, setMealType] = useState("Breakfast");
-  const [calories, setCalories] = useState("");
+  const [goal, setGoal] = useState("weight_loss");
+  const [diet, setDiet] = useState("none");
   const [meals, setMeals] = useState([]);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false); 
 
-  function getLocalDate() {
-  const today = new Date();
-  return today.toISOString().split("T")[0];
-}
-  const [selectedDate, setSelectedDate] = useState(getLocalDate());
+  const handleGenerate = async () => {
+    setLoading(true);
+    setMeals([]);
 
+    try {
+      const res = await fetch("http://localhost:3000/mealplan", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ goal, diet })
+      });
 
-  const fetchMeals = async () => {
-  const res = await fetch("http://localhost:3000/meals");
-  const data = await res.json();
-  setMeals(data);
-};
+      const data = await res.json();
 
+      setTimeout(() => {
+        setMeals(data.meals);
+        setLoading(false);
+      }, 500);
 
-useEffect(() => {
-  fetchMeals();
-}, []);
-
-  const handleSubmit = async () => {
-
-    if (!mealName.trim()){
-      setError("food name is required");
-      return;
+    } catch (err) {
+      setError("Failed to generate meals");
+      setLoading(false);
     }
-
-   if (!mealName || !/^[a-zA-Z\s]+$/.test(mealName)) {
-     setError("Food name must contain only letters");
-     return;
-   }
-
-    if (calories && (isNaN(calories) || calories <= 0 || calories > 2000)) {
-     setError("Calories must be between 1 and 2000");
-     return;
-  }
-   //Fetch runs only if valid
-    await fetch("http://localhost:3000/meals", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-
-      body: JSON.stringify({
-        meal_name: mealName,
-        meal_type: mealType,
-        calories,
-        date: selectedDate
-      })
-    });
-
-    setMealName("");
-    setCalories("");
-
-    await fetchMeals();
   };
 
+  // 🔥 NEW FUNCTION
+  const handleAddMeal = async (meal) => {
+    const confirmAdd = window.confirm(
+      `Add "${meal}" to your calorie tracker?`
+    );
 
-  const breakfastMeals = meals.filter(
-  m => m.meal_type === "Breakfast" && m.date === selectedDate
-);
+    if (!confirmAdd) return;
 
-const lunchMeals = meals.filter(
-  m => m.meal_type === "Lunch" && m.date === selectedDate
-);
+    try {
+      await fetch("http://localhost:3000/calories", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          food_name: meal,
+          calories: 500 // temporary default
+        })
+      });
 
-const dinnerMeals = meals.filter(
-  m => m.meal_type === "Dinner" && m.date === selectedDate
-);
-
-
+      alert(`${meal} added to tracker`);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to add meal");
+    }
+  };
 
   return (
-  <div className="meal-container">
-    <h2>Meal Planner</h2>
+    <div className="meal-container">
+      <h2>Meal Planner</h2>
 
-    {error && <p style={{ color: "red" }}>{error}</p>}
+      {error && <p style={{ color: "red" }}>{error}</p>}
 
-    
-      <div style={{ marginBottom: "15px" }}>
-        <label>Select Date: </label>
-        <input
-           type="date"
-           value={selectedDate}
-           onChange={(e) => setSelectedDate(e.target.value)}
-        />
-</div>
-    <div className="form">
-      <select
-        value={mealType}
-        onChange={(e) => setMealType(e.target.value)}
+      <div className="form">
+        <label>Fitness Goal:</label>
+        <select value={goal} onChange={(e) => setGoal(e.target.value)}>
+          <option value="weight_loss">Weight Loss</option>
+          <option value="muscle_gain">Muscle Gain</option>
+        </select>
+
+        <label>Dietary Preference:</label>
+        <select value={diet} onChange={(e) => setDiet(e.target.value)}>
+          <option value="none">None</option>
+          <option value="vegetarian">Vegetarian</option>
+          <option value="vegan">Vegan</option>
+        </select>
+
+        <button onClick={handleGenerate} disabled={loading}>
+          {loading ? "Generating..." : "Get Suggestions"}
+        </button>
+      </div>
+
+      <div
+        style={{
+          marginTop: "20px",
+          minHeight: "180px",
+          transition: "all 0.3s ease",
+          opacity: loading ? 0.6 : 1
+        }}
       >
-        <option>Breakfast</option>
-        <option>Lunch</option>
-        <option>Dinner</option>
-      
-      </select>
+        <h3>
+          Suggested Meals for{" "}
+          {goal === "weight_loss" ? "Weight Loss" : "Muscle Gain"}{" "}
+          {diet !== "none" && `(${diet.charAt(0).toUpperCase() + diet.slice(1)})`}
+        </h3>
 
-      <input
-        type="text"
-        placeholder="Food Name"
-        value={mealName}
-        onChange={(e) => { setMealName(e.target.value);
-        setError("");
-        }}
-      />
+        {loading ? (
+          <p style={{ color: "#777" }}>Generating meals...</p>
+        ) : meals.length === 0 ? (
+          <p style={{ color: "#777" }}>No suggestions yet</p>
+        ) : (
+          meals.map((meal, index) => (
+            <div
+              key={index}
+              style={{
+                padding: "10px",
+                marginBottom: "8px",
+                borderRadius: "8px",
+                backgroundColor: "#2c2c2c",
+                color: "white",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center"
+              }}
+            >
+              <span>{meal}</span>
 
-
-      <input
-        type="number"
-        placeholder="Calories"
-        value={calories}
-        onChange={(e) => { setCalories(e.target.value);
-          setError("");
-        }}
-      />
-
-
-      <button onClick={handleSubmit}>
-        Add Meal
-      </button>
+             
+              
+            </div>
+          ))
+        )}
+      </div>
     </div>
-    <div style={{ marginTop: "20px" }}>
-
-  <h3>Breakfast</h3>
-{breakfastMeals.length === 0 ? (
-  <p style={{ color: "#777" }}>No meals</p>
-) : (
-  breakfastMeals.map((meal, index) => (
-    <div key={index}>
-      {meal.meal_name} - {meal.calories} kcal
-    </div>
-  ))
-)}
-
-  <h3>Lunch</h3>
-  {lunchMeals.length === 0 ? (
-    <p style={{ color: "#777" }}>No meals</p>
-) : (
-  lunchMeals.map((meal, index) => (
-    <div key={index}>
-      {meal.meal_name} - {meal.calories} kcal
-    </div>
-  ))
-)}
-
-  <h3>Dinner</h3>
-    {dinnerMeals.length === 0 ? (
-      <p style={{ color: "#777" }}>No meals</p>
-) : (
-  dinnerMeals.map((meal, index) => (
-    <div key={index}>
-      {meal.meal_name} - {meal.calories} kcal
-    </div>
-  ))
-)}
-
-</div>
-  
-  </div>
-);
-
+  );
 }
 
 export default MealPlanner;

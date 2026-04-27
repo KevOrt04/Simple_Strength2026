@@ -202,6 +202,107 @@ app.get('/meals', (req, res) => {
     }
   );
 });
+
+
+// ==================
+// MEAL PLANNER (SUGGESTIONS)
+// ==================
+
+app.post('/mealplan', (req, res) => {
+  const { goal, diet } = req.body;
+  
+  const validGoals = ["weight_loss", "muscle_gain"];
+  const validDiets = ["none", "vegetarian", "vegan"];
+  if (!validGoals.includes(goal)) {
+  return res.status(400).json({ error: "Invalid goal" });
+}
+
+if (!validDiets.includes(diet)) {
+  return res.status(400).json({ error: "Invalid diet" });
+}
+
+  if (!goal) {
+    return res.status(400).json({ error: "Goal is required" });
+  }
+
+  // 🔹 Unified meal dataset (goal + diet combined)
+ const allMeals = [
+  // ======================
+  // WEIGHT LOSS - NONE
+  // ======================
+  { name: "Grilled chicken salad", goal: "weight_loss", diet: "none" },
+  { name: "Salmon with broccoli", goal: "weight_loss", diet: "none" },
+  { name: "Turkey lettuce wraps", goal: "weight_loss", diet: "none" },
+  { name: "Grilled shrimp with quinoa", goal: "weight_loss", diet: "none" },
+  { name: "Baked cod with green beans", goal: "weight_loss", diet: "none" },
+  { name: "Chicken breast with roasted vegetables", goal: "weight_loss", diet: "none" },
+
+  // ======================
+  // WEIGHT LOSS - VEGETARIAN
+  // ======================
+  { name: "Egg white omelet", goal: "weight_loss", diet: "vegetarian" },
+  { name: "Greek yogurt with berries", goal: "weight_loss", diet: "vegetarian" },
+  { name: "Cottage cheese with fruit", goal: "weight_loss", diet: "vegetarian" },
+  { name: "Vegetable quinoa bowl", goal: "weight_loss", diet: "vegetarian" },
+  { name: "Zucchini noodles with pesto", goal: "weight_loss", diet: "vegetarian" },
+
+  // ======================
+  // WEIGHT LOSS - VEGAN
+  // ======================
+  { name: "Tofu stir fry", goal: "weight_loss", diet: "vegan" },
+  { name: "Quinoa veggie bowl", goal: "weight_loss", diet: "vegan" },
+  { name: "Lentil salad", goal: "weight_loss", diet: "vegan" },
+  { name: "Chickpea salad", goal: "weight_loss", diet: "vegan" },
+  { name: "Vegetable soup", goal: "weight_loss", diet: "vegan" },
+
+  // ======================
+  // MUSCLE GAIN - NONE
+  // ======================
+  { name: "Chicken and rice", goal: "muscle_gain", diet: "none" },
+  { name: "Steak with potatoes", goal: "muscle_gain", diet: "none" },
+  { name: "Salmon with rice", goal: "muscle_gain", diet: "none" },
+  { name: "Ground beef pasta", goal: "muscle_gain", diet: "none" },
+  { name: "Chicken burrito bowl", goal: "muscle_gain", diet: "none" },
+
+  // ======================
+  // MUSCLE GAIN - VEGETARIAN
+  // ======================
+  { name: "Eggs with toast", goal: "muscle_gain", diet: "vegetarian" },
+  { name: "Protein yogurt bowl", goal: "muscle_gain", diet: "vegetarian" },
+  { name: "Oatmeal with protein powder", goal: "muscle_gain", diet: "vegetarian" },
+  { name: "Vegetarian pasta with cheese", goal: "muscle_gain", diet: "vegetarian" },
+  { name: "Rice and beans with cheese", goal: "muscle_gain", diet: "vegetarian" },
+
+  // ======================
+  // MUSCLE GAIN - VEGAN
+  // ======================
+  { name: "Lentil curry", goal: "muscle_gain", diet: "vegan" },
+  { name: "Vegan protein smoothie", goal: "muscle_gain", diet: "vegan" },
+  { name: "Tofu rice bowl", goal: "muscle_gain", diet: "vegan" },
+  { name: "Chickpea curry with rice", goal: "muscle_gain", diet: "vegan" },
+  { name: "Peanut butter banana smoothie", goal: "muscle_gain", diet: "vegan" }
+];
+
+  // 🔹 Filter logic (goal AND diet)
+  let meals = allMeals.filter(meal => {
+    const goalMatch = meal.goal === goal;
+    const dietMatch = diet === "none" || meal.diet === diet;
+    return goalMatch && dietMatch;
+  });
+
+  // 🔹 Fallback (if no match, still return something useful)
+  if (meals.length === 0) {
+    meals = allMeals.filter(meal => meal.goal === goal);
+  }
+
+  // 🔹 Randomize + limit results
+  const shuffled = [...meals].sort(() => 0.5 - Math.random());
+  const selectedMeals = shuffled.slice(0, 5);
+
+  // 🔹 Send only names
+  res.json({ meals: selectedMeals.map(m => m.name) });
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
