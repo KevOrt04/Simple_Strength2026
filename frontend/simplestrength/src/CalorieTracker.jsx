@@ -225,8 +225,8 @@ return (
             </span>
 
             <div className="actions">
-              <button onClick={() => handleDelete(entry.id)}>Delete</button>
-              <button onClick={() => handleEdit(entry)}>Edit</button>
+              <button className="delete-btn" onClick={() => handleDelete(entry.id)}>Delete</button>
+              <button className="edit-btn" onClick={() => handleEdit(entry)}>Edit</button>
             </div>
           </div>
         ))}
