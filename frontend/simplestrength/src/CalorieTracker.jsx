@@ -153,87 +153,99 @@ const handleEdit = (entry) => {
   setSelectedDate(entry.date);
   setEditId(entry.id);
 };
+
 return (
-  <div className="page">
-  <div className="container">
-    <div className="card">
+  <div className="calorie-tracker">
+    <div className="page">
+      <div className="container">
+        <div className="card">
 
-      <h2>Calorie Tracker</h2>
+          <h2>Calorie Tracker</h2>
 
+          {/* Inputs */}
+          <div className="input-row">
+            <input
+              type="text"
+              placeholder="Food name"
+              value={food}
+              onChange={(e) => {
+                setFood(e.target.value);
+                setError("");
+              }}
+            />
 
-      {/* Inputs */}
-      <div className="input-row">
-        <input
-          type="text"
-          placeholder="Food name"
-          value={food}
-          onChange={(e) => {
-            setFood(e.target.value);
-            setError("");
-          }}
-        />
+            <input
+              type="number"
+              placeholder="Calories"
+              value={calories}
+              onChange={(e) => {
+                setCalories(e.target.value);
+                setError("");
+              }}
+            />
+          </div>
 
-        <input
-          type="number"
-          placeholder="Calories"
-          value={calories}
-          onChange={(e) => {
-            setCalories(e.target.value);
-            setError("");
-          }}
-        />
+          <button className="add-btn" onClick={handleSubmit}>
+            {editId ? "Update" : "Add"}
+          </button>
 
-        <button onClick={handleSubmit}>
-          {editId ? "Update" : "Add"}
-        </button>
-      </div>
+          {/* Error */}
+          {error && <p className="error">{error}</p>}
 
-      {/* Error */}
-      {error && <p className="error">{error}</p>}
-
-      {/* Total */}
-      <div className="total-section">
-  <div className="total-circle">
-    <p className="total-label">Your Calories</p>
-    <h1 className="total-value">{totalCalories}</h1>
-    <span className="kcal">kcal</span>
-  </div>
-</div>
-
-  {/* Date */}
-      <div className="date-section">
-        <label>Select Date:</label>
-        <input
-          type="date"
-          value={selectedDate}
-          onChange={(e) => setSelectedDate(e.target.value)}
-        />
-      </div>
-
-
-      {/* Entries */}
-      <div className="entries">
-        {filteredEntries.length === 0 && (
-           <p style={{ color: "#777", marginTop: "10px" }}>
-             No entries for this day
-          </p>
-            )}
-        {filteredEntries.map((entry) => (
-          <div key={entry.id} className="entry">
-            <span>
-              {entry.food_name} - {entry.calories} - {formatDate(entry.date)}
-            </span>
-
-            <div className="actions">
-              <button className="delete-btn" onClick={() => handleDelete(entry.id)}>Delete</button>
-              <button className="edit-btn" onClick={() => handleEdit(entry)}>Edit</button>
+          {/* Total */}
+          <div className="total-section">
+            <div className="total-circle">
+              <p className="total-label">Your Calories</p>
+              <h1 className="total-value">{totalCalories}</h1>
+              <span className="kcal">kcal</span>
             </div>
           </div>
-        ))}
-      </div>
 
+          {/* Date */}
+          <div className="date-section">
+            <label>Select Date:</label>
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+            />
+          </div>
+
+          {/* Entries */}
+          <div className="entries">
+            {filteredEntries.length === 0 && (
+              <p style={{ color: "#777", marginTop: "10px" }}>
+                No entries for this day
+              </p>
+            )}
+
+            {filteredEntries.map((entry) => (
+              <div key={entry.id} className="entry">
+                <span>
+                  {entry.food_name} - {entry.calories} - {formatDate(entry.date)}
+                </span>
+
+                <div className="actions">
+                  <button
+                    className="delete-btn"
+                    onClick={() => handleDelete(entry.id)}
+                  >
+                    Delete
+                  </button>
+                  <button
+                    className="edit-btn"
+                    onClick={() => handleEdit(entry)}
+                  >
+                    Edit
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+        </div>
+      </div>
     </div>
-  </div>
   </div>
 );
 }

@@ -64,9 +64,6 @@ button:focus-visible {
   }
 }
 
-.container{
-  text-align: center;
-}
 .meal-container {
   display: flex;
   flex-direction: column;

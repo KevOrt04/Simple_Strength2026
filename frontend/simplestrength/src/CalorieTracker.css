@@ -12,13 +12,14 @@
 
 /* Card */
 .card {
-  background: white;   /* change from white → light gray */
+  background: white;
   padding: 30px;
   border-radius: 12px;
   text-align: center;
   box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-
-  width: 460px;
+  width: 100%;
+  max-width: 520px;
+  
 }
 
 /* Title */
@@ -39,14 +40,19 @@
 }
 
 /* Input row */
-.input-row {
+.calorie-tracker .input-row {
   display: flex;
+  flex-direction: row;     /* FORCE horizontal */
+  align-items: center;
   gap: 10px;
   margin-bottom: 15px;
+  width: 100%;
 }
 
-.input-row input {
-  flex: 1;
+.calorie-tracker .input-row input {
+  flex: 1 1 50%;   
+  min-width: 0;
+
   padding: 12px;
   border-radius: 8px;
   border: 1px solid #ccc;
@@ -54,20 +60,6 @@
   color: #222;
 }
 
-/* PRIMARY BUTTON (GREEN) */
-.input-row button {
-  padding: 12px 18px;
-  border-radius: 10px;
-  border: none;
-  background: #28a745;
-  color: white;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.input-row button:hover {
-  background: #218838;
-}
 
 /* Error */
 .error {
@@ -77,7 +69,6 @@
 
 
 /* Entries */
-/* ===== TOTAL (APPLE CENTERPIECE) ===== */
 .total-section {
   display: flex;
   justify-content: center;
@@ -166,4 +157,20 @@
 
 .delete-btn:hover {
   background-color: #c82333 !important;
+}
+
+.calorie-tracker .add-btn {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  border: none;
+  background: #28a745;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 15px;
+}
+
+.add-btn:hover {
+  background: #218838;
 }
