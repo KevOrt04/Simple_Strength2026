@@ -16,7 +16,11 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-
+const getLocalDate = () => {
+  const now = new Date();
+  const offset = now.getTimezoneOffset() * 60000;
+  return new Date(now - offset).toISOString().split("T")[0];
+};
 
 //connect to SQlite database
 const db = new sqlite3.Database(`./database.db`);
@@ -73,7 +77,7 @@ app.post('/calories', (req, res) => {
 
   const finalDate = date && date !== ""
     ? date
-    : new Date().toLocaleDateString('en-CA');
+    : getLocalDate();
 
   db.run(
     `INSERT INTO calories (food_name, calories, date)
@@ -139,7 +143,7 @@ app.put('/calories/:id', (req, res) => {
 
   const finalDate = date && date !== ""
     ? date
-    : new Date().toLocaleDateString('en-CA');
+    : getLocalDate();
 
   db.run(
     `UPDATE calories 
@@ -165,7 +169,7 @@ app.put('/calories/:id', (req, res) => {
 app.post('/meals', (req, res) => {
   const { meal_name, meal_type, calories, protein, carbs, fats } = req.body;
 
-  const today = new Date().toLocaleDateString('en-CA');
+  const today = getLocalDate();
 
   db.run(
     `INSERT INTO meals 

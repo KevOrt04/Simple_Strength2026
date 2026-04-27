@@ -1,0 +1,150 @@
+/* Page background */
+.container {
+  background: #f5f7f6;
+  min-height: 100vh;
+  width: 100%;
+  padding: 40px 20px;
+
+  display: flex;              /* ADD */
+  justify-content: center;    /* ADD */
+}
+
+
+/* Card */
+.card {
+  background: white;   /* change from white → light gray */
+  padding: 30px;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+
+  width: 460px;
+}
+
+/* Title */
+.card h2 {
+  color: #222;
+}
+
+/* Date section */
+.date-section {
+  margin-bottom: 20px;
+}
+
+.date-section input {
+  margin-left: 10px;
+  padding: 6px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+/* Input row */
+.input-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.input-row input {
+  flex: 1;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  background: white;
+  color: #222;
+}
+
+/* PRIMARY BUTTON (GREEN) */
+.input-row button {
+  padding: 12px 18px;
+  border-radius: 10px;
+  border: none;
+  background: #28a745;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.input-row button:hover {
+  background: #218838;
+}
+
+/* Error */
+.error {
+  color: red;
+  margin-bottom: 10px;
+}
+
+
+/* Entries */
+/* ===== TOTAL (APPLE CENTERPIECE) ===== */
+.total-section {
+  display: flex;
+  justify-content: center;
+  margin: 20px 0;
+}
+
+.total-circle {
+  width: 220px;
+  height: 220px;
+  border-radius: 50%; /* THIS makes it a circle */
+
+  background: #e9f7ef;
+  border: 2px solid #28a745;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+
+  margin: 0 auto;
+}
+
+.total-label {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.total-value {
+  font-size: 44px;
+  font-weight: bold;
+  color: #28a745;
+  margin: 5px 0;
+}
+
+.kcal {
+  font-size: 14px;
+  color: #555;
+}
+
+.entry {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fafafa;
+  border: 1px solid #eee;
+}
+
+/* Buttons for edit/delete */
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.actions button {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: none;
+  background: #e9ecef;
+  color: #333;
+  cursor: pointer;
+}
+
+.actions button:hover {
+  background: #d6d8db;
+}
+
