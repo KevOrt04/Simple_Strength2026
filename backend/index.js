@@ -1,60 +1,140 @@
+
+require('dotenv').config();
 const express = require('express');
-const sqlite3 = require (`sqlite3`).verbose();
+const axios = require('axios');
+const sqlite3 = require(`sqlite3`).verbose();
 const cors = require('cors');
+const session = require('express-session');
+const passport = require('passport');
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const API_KEY = process.env.USDA_API_KEY;
+const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || 'http://localhost:5173';
 
 // Middleware
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "http://localhost:5173");
-  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Content-Type");
-  next();
-});
+app.use(cors({
+  origin: FRONTEND_ORIGIN,
+  credentials: true,
+}));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-const getLocalDate = () => {
-  const now = new Date();
-  const offset = now.getTimezoneOffset() * 60000;
-  return new Date(now - offset).toISOString().split("T")[0];
-};
 
 //connect to SQlite database
 const db = new sqlite3.Database(`./database.db`);
 
+
+// Routes
+
+// Sessions (required for Google OAuth "login" persistence)
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'dev_insecure_secret_change_me',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: false, // set true behind HTTPS (production)
+  },
+}));
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+function requireAuth(req, res, next) {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  next();
+}
+
+passport.serializeUser((user, done) => done(null, user));
+passport.deserializeUser((obj, done) => done(null, obj));
+
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  passport.use(new GoogleStrategy(
+    {
+      clientID: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      callbackURL: process.env.GOOGLE_CALLBACK_URL || `http://localhost:${PORT}/auth/google/callback`,
+    },
+    (accessToken, refreshToken, profile, done) => {
+      const user = {
+        id: profile.id,
+        displayName: profile.displayName,
+        email: profile.emails?.[0]?.value || null,
+      };
+
+      db.run(
+        `INSERT OR IGNORE INTO users (id, display_name, email)
+     VALUES (?, ?, ?)`,
+        [user.id, user.displayName, user.email],
+        (err) => {
+          if (err) console.error(err);
+          return done(null, user);
+        });
+    }
+  ));
+}
+
+
 // Create calories and meal table if it doesn't exist
 db.serialize(() => {
+
   db.run(`
-    CREATE TABLE IF NOT EXISTS calories (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      food_name TEXT NOT NULL,
-      calories INTEGER NOT NULL,
-      date TEXT NOT NULL
-    )
-  `);
-   db.run(`
-    CREATE TABLE IF NOT EXISTS meals (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      meal_name TEXT NOT NULL,
-      meal_type TEXT NOT NULL,
-      calories INTEGER,
-     
-      date TEXT NOT NULL
-    )
-  `);
+  CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    display_name TEXT,
+    email TEXT
+  )
+`);
+
   db.run(`
   CREATE TABLE IF NOT EXISTS weights (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    weight INTEGER NOT NULL,
+    user_id TEXT,
+    weight REAL NOT NULL,
+    unit TEXT NOT NULL DEFAULT 'lbs',
+    date TEXT NOT NULL
+  )
+`);
+
+db.run(`
+  CREATE TABLE IF NOT EXISTS calories (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT,
+    food_name TEXT NOT NULL,
+    calories INTEGER NOT NULL,
+    date TEXT NOT NULL
+  )
+`);
+
+db.run(`
+  CREATE TABLE IF NOT EXISTS meals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT,
+    meal_name TEXT NOT NULL,
+    meal_type TEXT NOT NULL,
+    calories INTEGER,
+    protein INTEGER,
+    carbs INTEGER,
+    fats INTEGER,
     date TEXT NOT NULL
   )
 `);
 });
 
 // Routes
+
+function todayString() {
+  return new Intl.DateTimeFormat('en-CA').format(new Date()); 
+  // 'en-CA' uses the YYYY-MM-DD format
+}
+
+
 app.get('/', (req, res) => {
   res.send('Hello, Express!');
 });
@@ -63,327 +143,341 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-// ==================
-// CALORIES ROUTES
-// ==================
 
-// CREATE
-app.post('/calories', (req, res) => {
-  const { food_name, calories, date } = req.body;
 
-  //BASIC VALIDATION
-  if (!food_name || typeof food_name !== "string" || !/^[a-zA-Z\s]+$/.test(food_name)) {
-    return res.status(400).json({ error: "Food name must contain only letters" });
+// ---- Google OAuth routes ----
+app.get('/auth/google', (req, res, next) => {
+  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+    return res.status(500).json({ error: 'Missing GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET in environment' });
   }
+  return next();
+}, passport.authenticate('google', { scope: ['profile', 'email'] }));
 
-  if (calories === undefined || isNaN(calories) || calories <= 0 || calories > 2000) {
-    return res.status(400).json({ error: "Calories must be between 1 and 2000" });
-  }
+app.get('/auth/google/callback', (req, res, next) => {
+  passport.authenticate('google', { session: true }, (err, user, info) => {
+    if (err) {
+      const oauthErrorDetails =
+        err.oauthError?.data ||
+        err.oauthError?.message ||
+        err.message ||
+        'Unknown OAuth error';
 
-  const finalDate = date && date !== ""
-    ? date
-    : getLocalDate();
+      console.error('Google OAuth callback error:', oauthErrorDetails);
+      return res.status(500).json({
+        error: 'Google token exchange failed',
+        details: oauthErrorDetails,
+      });
+    }
 
-  db.run(
-    `INSERT INTO calories (food_name, calories, date)
-     VALUES (?, ?, ?)`,
-    [food_name, calories, finalDate],
-    function (err) {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ error: "Database error" });
+    if (!user) {
+      return res.status(401).json({
+        error: 'Google authentication failed',
+        details: info || null,
+      });
+    }
+
+    return req.logIn(user, (loginErr) => {
+      if (loginErr) {
+        console.error('Session login error after Google auth:', loginErr.message);
+        return res.status(500).json({ error: 'Session login failed' });
       }
 
-      res.json({ message: "Saved successfully" });
-    }
-  );
+      // Redirect back to the frontend after successful login
+      return res.redirect(`${FRONTEND_ORIGIN}/`);
+    });
+  })(req, res, next);
 });
 
-
-// READ
-app.get('/calories', (req, res) => {
-  db.all(
-    `SELECT * FROM calories ORDER BY id DESC`,
-    [],
-    (err, rows) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ error: 'Database error' });
-      }
-
-      res.json(rows);
-    }
-  );
+app.get('/auth/google/failure', (req, res) => {
+  res.status(401).send('Google authentication failed');
 });
 
-app.delete('/calories/:id', (req, res) => {
-  const { id } = req.params;
-
-  db.run(
-    `DELETE FROM calories WHERE id = ?`,
-    [id],
-    function (err) {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ error: 'Database error' });
-      }
-
-      res.json({ message: 'Deleted successfully', id });
-    }
-  );
+app.get('/auth/me', (req, res) => {
+  if (!req.user) return res.status(401).json({ authenticated: false });
+  return res.json({ authenticated: true, user: req.user });
 });
 
-app.put('/calories/:id', (req, res) => {
-  const { id } = req.params;
-  const { food_name, calories, date } = req.body;
-
-  // SAME VALIDATION
-  if (!food_name || typeof food_name !== "string" || !/^[a-zA-Z\s]+$/.test(food_name)) {
-    return res.status(400).json({ error: "Food name must contain only letters" });
-  }
-
-  if (calories === undefined || isNaN(calories) || calories <= 0 || calories > 2000) {
-    return res.status(400).json({ error: "Calories must be between 1 and 2000" });
-  }
-
-  const finalDate = date && date !== ""
-    ? date
-    : getLocalDate();
-
-  db.run(
-    `UPDATE calories 
-     SET food_name = ?, calories = ?, date = ?
-     WHERE id = ?`,
-    [food_name, calories, finalDate, id],
-    function (err) {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ error: "Database error" });
-      }
-
-      res.json({ message: "Updated successfully" });
-    }
-  );
-});
-
-// =============
-// MEALS ROUTES
-// =============
-
-// CREATE
-app.post('/meals', (req, res) => {
-  const { meal_name, meal_type, calories, date } = req.body;
-
-  const finalDate = date && date != ""
-  ? date
-  : getLocalDate();
-
-  db.run(
-    `INSERT INTO meals 
-     (meal_name, meal_type, calories, date)
-     VALUES (?, ?, ?, ?)`,
-    [meal_name, meal_type, calories, finalDate],
-    function(err) {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ error: 'Database error' });
-      }
-
-      res.json({ message: 'Meal saved successfully', id: this.lastID });
-    }
-  );
-});
-
-// READ
-app.get('/meals', (req, res) => {
-  db.all(
-    `SELECT * FROM meals ORDER BY date DESC`,
-    [],
-    (err, rows) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ error: 'Database error' });
-      }
-
-      res.json(rows);
-    }
-  );
-});
-
-
-// ==================
-// MEAL PLANNER (SUGGESTIONS)
-// ==================
-
-app.post('/mealplan', (req, res) => {
-  const { goal, diet } = req.body;
-  
-  const validGoals = ["weight_loss", "muscle_gain"];
-  const validDiets = ["none", "vegetarian", "vegan"];
-  if (!validGoals.includes(goal)) {
-  return res.status(400).json({ error: "Invalid goal" });
-}
-
-if (!validDiets.includes(diet)) {
-  return res.status(400).json({ error: "Invalid diet" });
-}
-
-  if (!goal) {
-    return res.status(400).json({ error: "Goal is required" });
-  }
-
-  // 🔹 Unified meal dataset (goal + diet combined)
- const allMeals = [
-  // ======================
-  // WEIGHT LOSS - NONE
-  // ======================
-  { name: "Grilled chicken salad", goal: "weight_loss", diet: "none" },
-  { name: "Salmon with broccoli", goal: "weight_loss", diet: "none" },
-  { name: "Turkey lettuce wraps", goal: "weight_loss", diet: "none" },
-  { name: "Grilled shrimp with quinoa", goal: "weight_loss", diet: "none" },
-  { name: "Baked cod with green beans", goal: "weight_loss", diet: "none" },
-  { name: "Chicken breast with roasted vegetables", goal: "weight_loss", diet: "none" },
-
-  // ======================
-  // WEIGHT LOSS - VEGETARIAN
-  // ======================
-  { name: "Egg white omelet", goal: "weight_loss", diet: "vegetarian" },
-  { name: "Greek yogurt with berries", goal: "weight_loss", diet: "vegetarian" },
-  { name: "Cottage cheese with fruit", goal: "weight_loss", diet: "vegetarian" },
-  { name: "Vegetable quinoa bowl", goal: "weight_loss", diet: "vegetarian" },
-  { name: "Zucchini noodles with pesto", goal: "weight_loss", diet: "vegetarian" },
-
-  // ======================
-  // WEIGHT LOSS - VEGAN
-  // ======================
-  { name: "Tofu stir fry", goal: "weight_loss", diet: "vegan" },
-  { name: "Quinoa veggie bowl", goal: "weight_loss", diet: "vegan" },
-  { name: "Lentil salad", goal: "weight_loss", diet: "vegan" },
-  { name: "Chickpea salad", goal: "weight_loss", diet: "vegan" },
-  { name: "Vegetable soup", goal: "weight_loss", diet: "vegan" },
-
-  // ======================
-  // MUSCLE GAIN - NONE
-  // ======================
-  { name: "Chicken and rice", goal: "muscle_gain", diet: "none" },
-  { name: "Steak with potatoes", goal: "muscle_gain", diet: "none" },
-  { name: "Salmon with rice", goal: "muscle_gain", diet: "none" },
-  { name: "Ground beef pasta", goal: "muscle_gain", diet: "none" },
-  { name: "Chicken burrito bowl", goal: "muscle_gain", diet: "none" },
-
-  // ======================
-  // MUSCLE GAIN - VEGETARIAN
-  // ======================
-  { name: "Eggs with toast", goal: "muscle_gain", diet: "vegetarian" },
-  { name: "Protein yogurt bowl", goal: "muscle_gain", diet: "vegetarian" },
-  { name: "Oatmeal with protein powder", goal: "muscle_gain", diet: "vegetarian" },
-  { name: "Vegetarian pasta with cheese", goal: "muscle_gain", diet: "vegetarian" },
-  { name: "Rice and beans with cheese", goal: "muscle_gain", diet: "vegetarian" },
-
-  // ======================
-  // MUSCLE GAIN - VEGAN
-  // ======================
-  { name: "Lentil curry", goal: "muscle_gain", diet: "vegan" },
-  { name: "Vegan protein smoothie", goal: "muscle_gain", diet: "vegan" },
-  { name: "Tofu rice bowl", goal: "muscle_gain", diet: "vegan" },
-  { name: "Chickpea curry with rice", goal: "muscle_gain", diet: "vegan" },
-  { name: "Peanut butter banana smoothie", goal: "muscle_gain", diet: "vegan" }
-];
-
-  // 🔹 Filter logic (goal AND diet)
-  let meals = allMeals.filter(meal => {
-    const goalMatch = meal.goal === goal;
-    const dietMatch = diet === "none" || meal.diet === diet;
-    return goalMatch && dietMatch;
+app.post('/auth/logout', (req, res, next) => {
+  req.logout((err) => {
+    if (err) return next(err);
+    req.session.destroy(() => res.json({ ok: true }));
   });
-
-  // 🔹 Fallback (if no match, still return something useful)
-  if (meals.length === 0) {
-    meals = allMeals.filter(meal => meal.goal === goal);
-  }
-
-  // 🔹 Randomize + limit results
-  const shuffled = [...meals].sort(() => 0.5 - Math.random());
-  const selectedMeals = shuffled.slice(0, 5);
-
-  // 🔹 Send only names
-  res.json({ meals: selectedMeals.map(m => m.name) });
 });
 
+app.post('/weights', requireAuth, (req, res) => {
+  const { weight, unit } = req.body;
 
+  const today = todayString();
+  const userId = req.user.id;
 
-
-//CREATE
-app.post('/weights', (req, res) => {
-  const { weight, date } = req.body;
-
-  if (!weight || isNaN(weight) || weight <= 0) {
-    return res.status(400).json({ error: "Invalid weight value" });
+  if (weight == null) {
+    return res.status(400).json({ error: 'weight is required' });
   }
 
-  const finalDate = date && date !== "" ? date : getLocalDate();
-
   db.run(
-    `INSERT INTO weights (weight, date) VALUES (?, ?)`,
-    [weight, finalDate],
+    `INSERT INTO weights (user_id, weight, unit, date)
+     VALUES (?, ?, ?, ?)`,
+    [
+      userId,
+      weight,
+      unit || 'lbs',
+      today
+    ],
     function (err) {
+
       if (err) {
         console.error(err);
-        return res.status(500).json({ error: "Database error" });
+        return res.status(500).json({ error: 'Database error' });
       }
 
-      res.json({ id: this.lastID, weight, date: finalDate });
+
+
+      res.json({
+        message: 'Weight saved successfully',
+        id: this.lastID
+      });
     }
   );
 });
 
-//READ
-app.get('/weights', (req, res) => {
-  db.all(`SELECT * FROM weights ORDER BY date DESC`, [], (err, rows) => {
+app.get('/weights', requireAuth, (req, res) => {
+  const { date } = req.query;
+  const userId = req.user.id;
+
+  let sql = `SELECT * FROM weights WHERE user_id = ?`;
+  const params = [userId];
+
+  if (date) {
+    sql += ` AND date = ?`;
+    params.push(date);
+  }
+
+  sql += ` ORDER BY date DESC, id DESC`;
+
+  db.all(sql, params, (err, rows) => {
     if (err) {
       console.error(err);
-      return res.status(500).json({ error: "Database error" });
+      return res.status(500).json({ error: 'Database error' });
     }
+
     res.json(rows);
   });
 });
 
-//DELETE
-app.delete('/weights/:id', (req, res) => {
-  const { id } = req.params;
-
-  db.run(`DELETE FROM weights WHERE id = ?`, [id], function (err) {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: "Database error" });
-    }
-
-    res.json({ message: "Deleted successfully" });
-  });
-});
-
-//UPDATE (EDIT)
-app.put('/weights/:id', (req, res) => {
-  const { id } = req.params;
-  const { weight, date } = req.body;
-
-  if (!weight || isNaN(weight) || weight <= 0) {
-    return res.status(400).json({ error: "Invalid weight value" });
-  }
+app.delete('/weights/:id', requireAuth, (req, res) => {
+  const weightId = req.params.id;
+  const userId = req.user.id;
 
   db.run(
-    `UPDATE weights SET weight = ?, date = ? WHERE id = ?`,
-    [weight, date, id],
+    `DELETE FROM weights WHERE id = ? AND user_id = ?`,
+    [weightId, userId],
     function (err) {
       if (err) {
         console.error(err);
-        return res.status(500).json({ error: "Database error" });
+        return res.status(500).json({ error: 'Database error' });
       }
 
-      res.json({ message: "Updated successfully" });
+      if (this.changes === 0) {
+        return res.status(404).json({ error: 'Weight entry not found' });
+      }
+
+      res.json({ message: 'Weight entry deleted successfully' });
     }
   );
 });
+
+app.post('/calories', requireAuth, (req, res) => {
+  const { food_name, calories } = req.body;
+  const today = todayString();
+  const userId = req.user.id;
+
+  db.run(
+    `INSERT INTO calories (user_id, food_name, calories, date)
+     VALUES (?, ?, ?, ?)`,
+    [userId, food_name, calories, today],
+    function (err) {
+      if (err) return res.status(500).json({ error: 'Database error' });
+
+      res.json({ message: 'Saved successfully' });
+    }
+  );
+});
+
+
+
+app.get('/calories', requireAuth, (req, res) => {
+  const { date } = req.query;
+  const userId = req.user.id;
+
+  let sql = `SELECT * FROM calories WHERE user_id = ?`;
+  const params = [userId];
+
+  if (date) {
+    sql += ` AND date = ?`;
+    params.push(date);
+  }
+
+  sql += ` ORDER BY date DESC, id DESC`;
+
+  db.all(sql, params, (err, rows) => {
+    if (err) return res.status(500).json({ error: 'Database error' });
+    res.json(rows);
+  });
+});
+
+app.delete('/calories/:id', requireAuth, (req, res) => {
+  const entryId = req.params.id;
+  const userId = req.user.id;
+
+  db.run(
+    `DELETE FROM calories WHERE id = ? AND user_id = ?`,
+    [entryId, userId],
+    function (err) {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+
+      if (this.changes === 0) {
+        return res.status(404).json({ error: 'Calorie entry not found' });
+      }
+
+      res.json({ message: 'Calorie entry deleted successfully' });
+    }
+  );
+});
+
+app.get('/search', async (req, res) => {     //Searching Method for example, "localhost:3000/search?food=apple"
+  try {                                      //Returns json file for all hits on the USDA database
+    if (!req.query.food) {
+      // Return here so the rest of the code doesn't run
+      return res.status(400).json({ error: "Missing food parameter" });
+    }
+    const foodName = req.query.food;
+    const response = await axios.get(`https://api.nal.usda.gov/fdc/v1/foods/search`, {
+      params: {
+        api_key: API_KEY,
+        query: foodName
+      }
+    });
+    res.json(response.data);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch data' });
+  }
+});
+
+app.get('/search/:fdcid', async (req, res) => {       //Searching for individual fdcid's of foods for example, "http://localhost:3000/search/454004"
+  try {
+    const { fdcid } = req.params; // Grabs the ID from your URL
+
+    if (!fdcid) {
+      return res.status(400).json({ error: "Missing fdcid parameter" });
+    }
+
+    // 1. Note the singular 'food' 
+    // 2. Note the ID is injected directly into the URL string
+    const response = await axios.get(`https://api.nal.usda.gov/fdc/v1/food/${fdcid}`, {
+      params: { api_key: API_KEY } // No 'query' here because the ID is in the Path!
+    });
+
+    res.json(response.data);
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ error: 'Failed to fetch food details' });
+  }
+});
+
+
+app.post('/meals', requireAuth, (req, res) => {
+  const { meal_name, meal_type, calories, protein, carbs, fats } = req.body;
+
+  const today = todayString();
+  const userId = req.user.id;
+
+  if (!meal_name || !meal_type) {
+    return res.status(400).json({ error: 'meal_name and meal_type are required' });
+  }
+
+  db.run(
+    `INSERT INTO meals 
+     (user_id, meal_name, meal_type, calories, protein, carbs, fats, date)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      userId,
+      meal_name,
+      meal_type,
+      calories ?? null,
+      protein ?? null,
+      carbs ?? null,
+      fats ?? null,
+      today
+    ],
+    function (err) {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+
+      res.json({
+        message: 'Meal saved successfully',
+        id: this.lastID
+      });
+    }
+  );
+});
+
+
+app.get('/meals', requireAuth, (req, res) => {
+  const { date, meal_type } = req.query;
+  const userId = req.user.id;
+
+  let sql = `SELECT * FROM meals WHERE user_id = ?`;
+  const params = [userId];
+
+  if (date) {
+    sql += ` AND date = ?`;
+    params.push(date);
+  }
+
+  if (meal_type) {
+    sql += ` AND meal_type = ?`;
+    params.push(meal_type);
+  }
+
+  sql += ` ORDER BY date DESC, id DESC`;
+
+  db.all(sql, params, (err, rows) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+
+    res.json(rows);
+  });
+});
+
+app.delete('/meals/:id', requireAuth, (req, res) => {
+  const mealId = req.params.id;
+  const userId = req.user.id;
+
+  db.run(
+    `DELETE FROM meals WHERE id = ? AND user_id = ?`,
+    [mealId, userId],
+    function (err) {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+
+      if (this.changes === 0) {
+        return res.status(404).json({ error: 'Meal not found' });
+      }
+
+      res.json({ message: 'Meal deleted successfully' });
+    }
+  );
+});
+
 
 // Start server
 app.listen(PORT, () => {
