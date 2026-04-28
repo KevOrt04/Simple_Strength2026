@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from "react";
+import "./WeightTracker.css";
 
 function WeightTracker() {
   // Get user's date
@@ -119,61 +120,68 @@ function WeightTracker() {
 
   return (
 
-    <div className="container">
-      <h2>Track Weight</h2>
-
-      {/* weight input */}
-      <input
-        type="number"
-        placeholder="Enter Weight (in lbs)"
-        value={weight}
-        min="1"
-        onChange={(e) => setWeight(e.target.value)}
-      />
-
-      {/* date input */}
-      <input
-        type="date"
-        value={date}
-        onChange={(e) => setDate(e.target.value)}
-      />
-
-      <button onClick={handleSubmit}>
-        {editId !== null ? "Save" : "Add"}
-      </button>
-
-      {/* filter setting for month */}
+    <div className="weight-tracker">
       <div>
-        <p>Select Date: 
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-          />
+        <div>
+          <div>
+            <div style={{textAlign: "center", marginTop: "100px"}}>
+              <h2>Track Weight</h2>
+            </div>
+            {/* weight input */}
+            <input
+              type="number"
+              placeholder="Enter Weight (in lbs)"
+              value={weight}
+              min="1"
+              onChange={(e) => setWeight(e.target.value)}
+            />
 
-          <button onClick={() => setSelectedDate("")}>
-            Show All
-          </button>
-        </p>
+            {/* date input */}
+            <input 
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+            />
+
+            <button onClick={handleSubmit}>
+              {editId !== null ? "Save" : "Add"}
+            </button>
+
+            {/* filter setting for month */}
+            <div>
+              <p>Select Date: 
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                />
+
+                <button onClick={() => setSelectedDate("")}>
+                  Show All
+                </button>
+              </p>
+            </div>
+            {/* display list of entries */}
+            {/*entries are sorted newest to oldest by date*/}
+            {[...filteredEntries]
+              .sort((a,b) => new Date(b.date) - new Date(a.date))
+              .map((entry) => (
+                <p key={entry.id}>
+                  {entry.weight} lb(s) - {formatDate(entry.date)}
+
+                  <button onClick={() => handleEdit(entry)}>
+                    Edit
+                  </button>
+
+                  <button onClick={() => handleDelete(entry.id)}>
+                    Delete
+                  </button>
+                </p>
+              ))
+            }
+          </div>
+        </div>
       </div>
-      {/* display list of entries */}
-      {/*entries are sorted newest to oldest by date*/}
-      {[...filteredEntries]
-        .sort((a,b) => new Date(b.date) - new Date(a.date))
-        .map((entry) => (
-          <p key={entry.id}>
-            {entry.weight} lb(s) - {formatDate(entry.date)}
-
-            <button onClick={() => handleEdit(entry)}>
-              Edit
-            </button>
-
-            <button onClick={() => handleDelete(entry.id)}>
-              Delete
-            </button>
-          </p>
-        ))
-      }
     </div>
   );
 }
