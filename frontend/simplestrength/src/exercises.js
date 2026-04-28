@@ -37,7 +37,6 @@ export const EXERCISES = {
         "Pec Deck Machine",
       ],
       bodweightVariations: [
-        "Sliding Chest Fly (sliders or towels on a smooth floor)",
         "Wide Push-Up",
       ],
       image: "https://ik.imagekit.io/yuhonas/tr:w-250,h-180/Butterfly/1.jpg",
@@ -58,7 +57,7 @@ export const EXERCISES = {
       bodweightVariations: [
         "Pull-Up (overhand grip)",
         "Chin-Up (underhand grip)",
-        "Negative Pull-Up (jump up, lower slowly)",
+        "Negative Pull-Up (lower slowly)",
       ],
       image: "https://ik.imagekit.io/yuhonas/tr:w-250,h-180/Pullups/0.jpg",
     },
@@ -200,7 +199,7 @@ export const EXERCISES = {
       bodweightVariations: [
         "Resistance Band Lateral Raise",
         "Wall Handstand Hold",
-        "Pike Push-Up (side emphasis)",
+        "Pike Push-Up",
       ],
       image: "https://ik.imagekit.io/yuhonas/tr:w-250,h-180/Side_Lateral_Raise/1.jpg",
     },
