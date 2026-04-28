@@ -54,7 +54,6 @@ function WeightTracker() {
 
     setEditId(null);
     setWeight("");
-    setDate(getTodayDate());
     return;
   }
 
@@ -81,7 +80,6 @@ function WeightTracker() {
   }
 
   setWeight("");
-  setDate(getTodayDate());
 };
 
   const handleEdit = (entry) => {
@@ -106,18 +104,13 @@ function WeightTracker() {
   };
 
   //DEFAULT TO TODAY IF NOTHING SELCTED
-  const today = getTodayDate();
+const activeDate = date || getTodayDate();
 
-  const selectedEntries = entries.filter(
-  (entry) => entry.date === date
-  );
-
-  const todayEntries = entries.filter(
-  (entry) => entry.date === today
-  );
-
-  const filteredEntries =
-  selectedEntries.length > 0 ? selectedEntries : todayEntries;
+const filteredEntries = entries.filter((entry) => {
+   if (!entry.date) return false;
+  const entryDate = entry.date.split("T")[0];
+  return entryDate === activeDate;
+});
 
 
   return (
