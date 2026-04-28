@@ -21,7 +21,7 @@ function CalorieTracker() {
   };
 
   return (
-    <div>
+    <div className="container">
       <h2>Track Calories</h2>
 
       <input
