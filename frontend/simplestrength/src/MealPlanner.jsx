@@ -34,7 +34,7 @@ function MealPlanner() {
     }
   };
 
-  // 🔥 NEW FUNCTION
+  // NEW FUNCTION
   const handleAddMeal = async (meal) => {
     const confirmAdd = window.confirm(
       `Add "${meal}" to your calorie tracker?`
@@ -62,12 +62,13 @@ function MealPlanner() {
   };
 
   return (
-    <div className="meal-container">
+      <div className="container">
+        <div className="card">
       <h2>Meal Planner</h2>
 
       {error && <p style={{ color: "red" }}>{error}</p>}
 
-      <div className="form">
+      <div className="input-row">
         <label>Fitness Goal:</label>
         <select value={goal} onChange={(e) => setGoal(e.target.value)}>
           <option value="weight_loss">Weight Loss</option>
@@ -81,19 +82,12 @@ function MealPlanner() {
           <option value="vegan">Vegan</option>
         </select>
 
-        <button onClick={handleGenerate} disabled={loading}>
+        <button className="Getsuggest-btn" onClick={handleGenerate} disabled={loading}>
           {loading ? "Generating..." : "Get Suggestions"}
         </button>
+
       </div>
 
-      <div
-        style={{
-          marginTop: "20px",
-          minHeight: "180px",
-          transition: "all 0.3s ease",
-          opacity: loading ? 0.6 : 1
-        }}
-      >
         <h3>
           Suggested Meals for{" "}
           {goal === "weight_loss" ? "Weight Loss" : "Muscle Gain"}{" "}
@@ -112,8 +106,8 @@ function MealPlanner() {
                 padding: "10px",
                 marginBottom: "8px",
                 borderRadius: "8px",
-                backgroundColor: "#2c2c2c",
-                color: "white",
+                backgroundColor: "#e9f7ef",
+                color: "green",
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center"
@@ -122,11 +116,12 @@ function MealPlanner() {
               <span>{meal}</span>
 
              
-              
-            </div>
+              </div>
+            
           ))
         )}
-      </div>
+     
+    </div>
     </div>
   );
 }
