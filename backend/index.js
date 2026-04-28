@@ -45,6 +45,13 @@ db.serialize(() => {
       date TEXT NOT NULL
     )
   `);
+  db.run(`
+  CREATE TABLE IF NOT EXISTS weights (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    weight INTEGER NOT NULL,
+    date TEXT NOT NULL
+  )
+`);
 });
 
 // Routes
@@ -301,6 +308,81 @@ if (!validDiets.includes(diet)) {
 
   // 🔹 Send only names
   res.json({ meals: selectedMeals.map(m => m.name) });
+});
+
+
+
+
+//CREATE
+app.post('/weights', (req, res) => {
+  const { weight, date } = req.body;
+
+  if (!weight || isNaN(weight) || weight <= 0) {
+    return res.status(400).json({ error: "Invalid weight value" });
+  }
+
+  const finalDate = date && date !== "" ? date : getLocalDate();
+
+  db.run(
+    `INSERT INTO weights (weight, date) VALUES (?, ?)`,
+    [weight, finalDate],
+    function (err) {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: "Database error" });
+      }
+
+      res.json({ id: this.lastID, weight, date: finalDate });
+    }
+  );
+});
+
+//READ
+app.get('/weights', (req, res) => {
+  db.all(`SELECT * FROM weights ORDER BY date DESC`, [], (err, rows) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    res.json(rows);
+  });
+});
+
+//DELETE
+app.delete('/weights/:id', (req, res) => {
+  const { id } = req.params;
+
+  db.run(`DELETE FROM weights WHERE id = ?`, [id], function (err) {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Database error" });
+    }
+
+    res.json({ message: "Deleted successfully" });
+  });
+});
+
+//UPDATE (EDIT)
+app.put('/weights/:id', (req, res) => {
+  const { id } = req.params;
+  const { weight, date } = req.body;
+
+  if (!weight || isNaN(weight) || weight <= 0) {
+    return res.status(400).json({ error: "Invalid weight value" });
+  }
+
+  db.run(
+    `UPDATE weights SET weight = ?, date = ? WHERE id = ?`,
+    [weight, date, id],
+    function (err) {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: "Database error" });
+      }
+
+      res.json({ message: "Updated successfully" });
+    }
+  );
 });
 
 // Start server

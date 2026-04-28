@@ -8,11 +8,11 @@ function WeightTracker() {
     return new Date().toISOString().split("T")[0];
   }
 
-  const [weight, setWeight] = useState("");
   const [date, setDate] = useState(getTodayDate());
   const [entries, setEntries] = useState([]);
   const [editId, setEditId] = useState(null);
-  const [selectedDate, setSelectedDate] = useState(getTodayDate());
+  const [weight, setWeight] = useState("");
+  
 
   // GET data
   const fetchEntries = async () => {
@@ -31,79 +31,73 @@ function WeightTracker() {
 
   // POST data 
   const handleSubmit = async () => {
-    // Input Validation
-    if (!Number.isInteger(Number(weight)) || Number(weight) <= 0) {
-      alert("Make sure you enter a proper integer value for weights");
-      return;
-    }
-    
-    const entryData = {
-      weight: Number(weight),
-      date: date
-    };
+  // Input Validation
+  if (!Number.isInteger(Number(weight)) || Number(weight) <= 0) {
+    alert("Make sure you enter a proper integer value for weights");
+    return;
+  }
 
-    // Edit Mode
-    if (editId !== null) {
-      setEntries((prev) =>
-        prev.map((entry) =>
-          entry.id === editId ? { ...entry, ...entryData} : entry
-        )
-      );
+  const entryData = {
+    weight: Number(weight),
+    date: date
+  };
 
-      setEditId(null);
-      setWeight("");
-      setDate(getTodayDate());
-      return;
-    }
+  // ✅ EDIT MODE
+  if (editId !== null) {
+    await fetch(`http://localhost:3000/weights/${editId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(entryData)
+    });
 
-    // Add mode
-    try {
-      const res = await fetch("http://localhost:3000/weights", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(entryData)
-      });
+    await fetchEntries();
 
-      const result = await res.json();
-      console.log("POST result:", result);
-
-      await fetchEntries();
-    } catch (err) {
-      console.log("POST route not ready yet");
-
-      // fallback when backend not applied
-      setEntries((prev) => [
-        {
-          id: Date.now(),
-          ...entryData
-        },
-        ...prev
-      ]);
-    }
-
+    setEditId(null);
     setWeight("");
     setDate(getTodayDate());
+    return;
   }
 
-  // load entry values back into inputs
-  const handleEdit = (entry) => {
-    setWeight(String(entry.weight));
-    setDate(entry.date);
-    setEditId(entry.id);
+  //ADD MODE
+  try {
+    const res = await fetch("http://localhost:3000/weights", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(entryData)
+    });
+
+    await res.json();
+    await fetchEntries();
+  } catch (err) {
+    console.log("POST route not ready yet");
+
+    // fallback
+    setEntries((prev) => [
+      { id: Date.now(), ...entryData },
+      ...prev
+    ]);
   }
+
+  setWeight("");
+  setDate(getTodayDate());
+};
+
+  const handleEdit = (entry) => {
+  setWeight(String(entry.weight));
+  setDate(entry.date);
+  setEditId(entry.id);
+};
 
   // remove entry from local state
-  const handleDelete = (id) => {
-    setEntries((prev) => prev.filter((entry) => entry.id !== id));
+  const handleDelete = async (id) => {
+  await fetch(`http://localhost:3000/weights/${id}`, {
+    method: "DELETE"
+  });
 
-    if (editId === id) {
-      setEditId(null);
-      setWeight("");
-      setDate(getTodayDate());
-    }
-  }
+  await fetchEntries();
+};
 
   // Format date entries into mm/dd/yyyy
   const formatDate = (dateStr) => {
@@ -111,79 +105,125 @@ function WeightTracker() {
     return `${month}/${day}/${year}`;
   };
 
-  // Filter weight entries by date
-  const filteredEntries = selectedDate
-    ? entries.filter(
-        (entry) => entry.date === selectedDate
-      )
-    : entries;
+  //DEFAULT TO TODAY IF NOTHING SELCTED
+  const today = getTodayDate();
+
+  const selectedEntries = entries.filter(
+  (entry) => entry.date === date
+  );
+
+  const todayEntries = entries.filter(
+  (entry) => entry.date === today
+  );
+
+  const filteredEntries =
+  selectedEntries.length > 0 ? selectedEntries : todayEntries;
+
 
   return (
+  <div className="container">
+    <div className="card">
+      <h2>Weight Tracker</h2>
 
-    <div className="weight-tracker">
-      <div>
-        <div>
-          <div>
-            <div style={{textAlign: "center", marginTop: "100px"}}>
-              <h2>Track Weight</h2>
+      {/* Inputs side-by-side */}
+      <div
+        className="input-row"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr", // weight wider, date smaller
+          gap: "14px",
+          marginBottom: "18px",
+          
+        }}
+      >
+        <input
+          type="number"
+          placeholder="Enter Weight (lbs)"
+          value={weight}
+          min="1"
+          onChange={(e) => setWeight(e.target.value)}
+          style={{
+            width: "90%",
+            padding: "12px",
+            borderRadius: "12px",
+            border: "1px solid #d1d5db",
+            fontSize: "16px",
+            outline: "none",
+            backgroundColor: "#f9fafb",
+          }}
+        />
+
+        <input
+  type="date"
+  value={date}
+  onChange={(e) => setDate(e.target.value)}
+  style={{
+    width: "87%",
+    padding: "12px",
+    borderRadius: "12px",
+    border: "1px solid #1f2937",
+    backgroundColor: "#1f2937",
+    color: "white",     
+    fontSize: "16px",
+    outline: "none",
+    cursor: "pointer",
+  
+  }}
+/>
+      </div>
+
+      {/* Centered Add button */}
+      <button
+        className="submit-btn"
+        onClick={handleSubmit}
+        style={{
+          display: "block",
+          margin: "0 auto 20px auto",
+          width: "100%",
+        }}
+      >
+        {editId !== null ? "Save" : "Add"}
+      </button>
+
+      <div className="entries">
+        {
+        [...filteredEntries]
+          .sort((a, b) => new Date(b.date) - new Date(a.date))
+          .map((entry) => (
+            <div key={entry.id} className="entry">
+              <span>
+                {entry.weight} lb(s) - {formatDate(entry.date)}
+              </span>
+
+              <div className="actions">
+                 <button onClick={() => handleDelete(entry.id)}
+                          style={{
+                              backgroundColor: "#dc2626", // red
+                               color: "white",
+                                border: "none",
+                               padding: "6px 10px",
+                               borderRadius: "6px",
+                              cursor: "pointer"
+                               }}>
+                             Delete
+                   </button>
+                <button onClick={() => handleEdit(entry)}
+                        style={{
+                          backgroundColor: "#16a34a", // green
+                          color: "white",
+                          border: "none",
+                          padding: "6px 20px",
+                          borderRadius: "6px",
+                          cursor: "pointer"
+                        }}>Edit</button>
+               
+              </div>
             </div>
-            {/* weight input */}
-            <input
-              type="number"
-              placeholder="Enter Weight (in lbs)"
-              value={weight}
-              min="1"
-              onChange={(e) => setWeight(e.target.value)}
-            />
-
-            {/* date input */}
-            <input 
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-            />
-
-            <button onClick={handleSubmit}>
-              {editId !== null ? "Save" : "Add"}
-            </button>
-
-            {/* filter setting for month */}
-            <div>
-              <p>Select Date: 
-                <input
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                />
-
-                <button onClick={() => setSelectedDate("")}>
-                  Show All
-                </button>
-              </p>
-            </div>
-            {/* display list of entries */}
-            {/*entries are sorted newest to oldest by date*/}
-            {[...filteredEntries]
-              .sort((a,b) => new Date(b.date) - new Date(a.date))
-              .map((entry) => (
-                <p key={entry.id}>
-                  {entry.weight} lb(s) - {formatDate(entry.date)}
-
-                  <button onClick={() => handleEdit(entry)}>
-                    Edit
-                  </button>
-
-                  <button onClick={() => handleDelete(entry.id)}>
-                    Delete
-                  </button>
-                </p>
-              ))
-            }
-          </div>
-        </div>
+          ))}
       </div>
     </div>
-  );
+  </div>
+);
 }
 
 export default WeightTracker;

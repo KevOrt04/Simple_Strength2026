@@ -1,9 +1,42 @@
+/* Layout for inputs */
+.input-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr; /* weight bigger, calendar smaller */
+  gap: 12px;
+  margin-bottom: 15px;
+}
 
-.weight-tracker {
-    background: #f5f7f6;
-    min-height: 100vh;
-    width: 100%;
-    padding: 40px 20px;
-    display: flex;              
-    justify-content: center;    
+/* Weight input */
+.input-row input[type="number"] {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+}
+
+/* Date input (keep native behavior) */
+.input-row input[type="date"] {
+  width: 100%;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+  cursor: pointer;
+}
+
+/* Centered Add button */
+.submit-btn {
+  display: block;
+  margin: 0 auto;     
+  width: 60%;         
+  background: #2ea043;
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 12px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.submit-btn:hover {
+  opacity: 0.9;
 }
