@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { EXERCISES } from "./exercises";
+import "./WorkoutCreator.css";
 
 const MUSCLE_GROUPS = [
   { id: "chest", label: "Chest" },

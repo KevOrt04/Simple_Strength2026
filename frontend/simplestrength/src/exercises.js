@@ -271,8 +271,8 @@ export const EXERCISES = {
       image: "https://ik.imagekit.io/yuhonas/tr:w-250,h-180/Plank/1.jpg",
     },
     {
-      id: "bicycle-crunch",
-      name: "Bicycle Crunch",
+      id: "cable-crunch",
+      name: "Cable Crunch",
       muscles: ["Rectus Abdominis", "Obliques", "Hip Flexors"],
       description:
         "A dynamic core exercise combining a crunch with a cycling leg motion. Alternating elbow-to-knee rotations simultaneously target the upper abs and obliques, making it one of the most efficient core movements per rep.",
