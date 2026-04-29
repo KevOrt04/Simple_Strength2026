@@ -24,9 +24,9 @@ function CalorieTracker() {
   const [selectedDate, setSelectedDate] = useState(getLocalDate());
 
     
- const filteredEntries = entries;
+ 
 
- const totalCalories = filteredEntries.reduce((sum, entry) => {
+ const totalCalories = entries.reduce((sum, entry) => {
   return sum + Number(entry.calories);
 }, 0);
 
@@ -205,13 +205,13 @@ return (
 
           {/* Entries */}
           <div className="entries">
-            {filteredEntries.length === 0 && (
+            {entries.length === 0 && (
               <p style={{ color: "#777", marginTop: "10px" }}>
                 No entries for this day
               </p>
             )}
 
-            {filteredEntries.map((entry) => (
+            {entries.map((entry) => (
               <div key={entry.id} className="entry">
                 <span>
                   {entry.food_name} - {entry.calories} - {formatDate(entry.date)}
