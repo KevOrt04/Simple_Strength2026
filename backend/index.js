@@ -266,10 +266,10 @@ app.post('/auth/logout', (req, res, next) => {
 });
 
 app.post('/weights', (req, res) => {
-  const { weight, unit } = req.body;
-
-  const today = todayString();
+  const { weight, unit, date } = req.body;   
   const userId = 'demo-user';
+
+  const finalDate = date || todayString();   
 
   if (weight == null || isNaN(weight) || weight <= 0) {
     return res.status(400).json({ error: 'weight must be a positive number' });
@@ -286,7 +286,7 @@ app.post('/weights', (req, res) => {
       userId,
       weight,
       unit || 'lbs',
-      today
+      finalDate   
     ],
     function (err) {
 
@@ -294,8 +294,6 @@ app.post('/weights', (req, res) => {
         console.error(err);
         return res.status(500).json({ error: 'Database error' });
       }
-
-
 
       res.json({
         message: 'Weight saved successfully',
@@ -306,24 +304,21 @@ app.post('/weights', (req, res) => {
 });
 
 app.get('/weights', (req, res) => {
-  const { date } = req.query;
+  let { date } = req.query;
   const userId = 'demo-user';
 
-  if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    return res.status(400).json({ error: 'date must be in YYYY-MM-DD format' });
+  // fallback to today
+  if (!date) {
+    date = todayString();
   }
 
-  let sql = `SELECT * FROM weights WHERE user_id = ?`;
-  const params = [userId];
+  const sql = `
+    SELECT * FROM weights 
+    WHERE user_id = ? AND date = ?
+    ORDER BY date DESC, id DESC
+  `;
 
-  if (date) {
-    sql += ` AND date = ?`;
-    params.push(date);
-  }
-
-  sql += ` ORDER BY date DESC, id DESC`;
-
-  db.all(sql, params, (err, rows) => {
+  db.all(sql, [userId, date], (err, rows) => {
     if (err) {
       console.error(err);
       return res.status(500).json({ error: 'Database error' });
@@ -605,6 +600,37 @@ app.delete('/meals/:id', (req, res) => {
       }
 
       res.json({ message: 'Meal deleted successfully' });
+    }
+  );
+});
+
+app.put('/weights/:id', (req, res) => {
+  const { id } = req.params;
+  const { weight, unit, date } = req.body;
+  const userId = 'demo-user';
+
+  if (weight == null || isNaN(weight) || weight <= 0) {
+    return res.status(400).json({ error: 'weight must be a positive number' });
+  }
+
+  const finalDate = date || todayString();
+
+  db.run(
+    `UPDATE weights
+     SET weight = ?, unit = ?, date = ?
+     WHERE id = ? AND user_id = ?`,
+    [weight, unit || 'lbs', finalDate, id, userId],
+    function (err) {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+
+      if (this.changes === 0) {
+        return res.status(404).json({ error: 'Weight entry not found' });
+      }
+
+      res.json({ message: 'Weight updated successfully' });
     }
   );
 });

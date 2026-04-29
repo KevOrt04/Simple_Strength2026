@@ -42,18 +42,18 @@
 /* Input row */
 .calorie-tracker .input-row {
   display: flex;
+  justify-content: center;
   flex-direction: row;     /* FORCE horizontal */
   align-items: center;
-  gap: 10px;
-  margin-bottom: 15px;
-  width: 100%;
+  padding: 30px;
+  margin-bottom: 10px;
+  width: 90%;
 }
 
 .calorie-tracker .input-row input {
   flex: 1 1 50%;   
   min-width: 0;
-
-  padding: 12px;
+  padding: 13px 15px;
   border-radius: 8px;
   border: 1px solid #ccc;
   background: white;
@@ -168,7 +168,7 @@
   color: white;
   font-weight: 600;
   cursor: pointer;
-  margin-bottom: 15px;
+  margin-bottom: 10px;
 }
 
 .add-btn:hover {

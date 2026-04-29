@@ -5,8 +5,10 @@ import "./WeightTracker.css";
 function WeightTracker() {
   // Get user's date
   const getTodayDate = () => {
-    return new Date().toISOString().split("T")[0];
-  }
+  const now = new Date();
+  const offset = now.getTimezoneOffset() * 60000;
+  return new Date(now - offset).toISOString().split("T")[0];
+}
 
   const [date, setDate] = useState(getTodayDate());
   const [entries, setEntries] = useState([]);
@@ -17,7 +19,11 @@ function WeightTracker() {
   // GET data
   const fetchEntries = async () => {
     try {
-      const res = await fetch("http://localhost:3000/weights");
+      const activeDate = date || getTodayDate();
+
+const res = await fetch(
+  `http://localhost:3000/weights?date=${activeDate}`
+);
       const data = await res.json();
       setEntries(data);
     } catch(err) {
@@ -27,7 +33,7 @@ function WeightTracker() {
   // RUN on load
   useEffect(() => {
     fetchEntries();
-  }, []);
+  }, [date]);
 
   // POST data 
   const handleSubmit = async () => {
@@ -42,7 +48,7 @@ function WeightTracker() {
     date: date
   };
 
-  // ✅ EDIT MODE
+  // EDIT MODE
   if (editId !== null) {
     await fetch(`http://localhost:3000/weights/${editId}`, {
       method: "PUT",
@@ -179,6 +185,11 @@ const filteredEntries = entries.filter((entry) => {
       </button>
 
       <div className="entries">
+         {filteredEntries.length === 0 && (
+    <p style={{ color: "#777", marginTop: "10px" }}>
+      No entries for this day
+    </p>
+  )}
         {
         [...filteredEntries]
           .sort((a, b) => new Date(b.date) - new Date(a.date))

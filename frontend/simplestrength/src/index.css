@@ -24,10 +24,6 @@ a:hover {
 
 body {
   margin: 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-width: 320px;
   min-height: 100vh;
   background-color: #ffffff;
 }
@@ -57,9 +53,15 @@ button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
 
-.container{
-  text-align: center;
+.card {
+  background: white;
 }
+
+.container {
+  text-align: center;
+  padding: 20px;
+}
+
 .meal-container {
   display: flex;
   flex-direction: column;
