@@ -29,6 +29,7 @@
 /* Date section */
 .date-section {
   margin-bottom: 20px;
+
 }
 
 .date-section input {
@@ -172,4 +173,17 @@
 
 .add-btn:hover {
   background: #218838;
+}
+.date-section input[type="date"] {
+  background-color: #333 !important;
+  color: #fff !important;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+
+/* This targets the visible text inside the date input */
+.date-section input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  cursor: pointer;
 }

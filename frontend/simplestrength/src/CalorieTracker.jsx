@@ -23,37 +23,29 @@ function CalorieTracker() {
   const [error, setError] = useState("");
   const [selectedDate, setSelectedDate] = useState(getLocalDate());
 
-    // FILTERING FIRST
-  const filteredEntries = entries.filter((entry) => {
-  const activeDate = selectedDate || getLocalDate();
-  return entry.date === activeDate;
-});
+    
+ const filteredEntries = entries;
+
+ const totalCalories = filteredEntries.reduce((sum, entry) => {
+  return sum + Number(entry.calories);
+}, 0);
 
   // TOTAL (must use filtered)
-  const totalCalories = filteredEntries.reduce((sum, entry) => {
-    return sum + Number(entry.calories);
-  }, 0);
-
-  //GET data
   const fetchEntries = async () => {
-  
-
-
   try {
-    const res = await fetch("http://localhost:3000/calories");
+    const res = await fetch(
+      `http://localhost:3000/calories?date=${selectedDate}`
+    );
 
     if (!res.ok) {
       console.error("Server error while fetching entries");
-      setError("Server error ocurred");
+      setError("Server error occurred");
       return;
     }
 
     const data = await res.json();
-
-    
     setEntries(data);
-
-    setError(""); //clear error if succesful
+    setError("");
 
   } catch (err) {
     console.error("Network error while fetching entries:", err);
@@ -63,8 +55,8 @@ function CalorieTracker() {
 
   //RUN on load 
   useEffect(() => {
-    fetchEntries();
-  }, []);
+  fetchEntries();
+}, [selectedDate]);   
 
 
   //POST data

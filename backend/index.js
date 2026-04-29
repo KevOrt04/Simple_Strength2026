@@ -204,11 +204,11 @@ app.post('/auth/logout', (req, res, next) => {
   });
 });
 
-app.post('/weights', requireAuth, (req, res) => {
+app.post('/weights', (req, res) => {
   const { weight, unit } = req.body;
 
   const today = todayString();
-  const userId = req.user.id;
+  const userId = 'demo-user';
 
   if (weight == null) {
     return res.status(400).json({ error: 'weight is required' });
@@ -240,9 +240,9 @@ app.post('/weights', requireAuth, (req, res) => {
   );
 });
 
-app.get('/weights', requireAuth, (req, res) => {
+app.get('/weights', (req, res) => {
   const { date } = req.query;
-  const userId = req.user.id;
+  const userId = 'demo-user';
 
   let sql = `SELECT * FROM weights WHERE user_id = ?`;
   const params = [userId];
@@ -264,9 +264,9 @@ app.get('/weights', requireAuth, (req, res) => {
   });
 });
 
-app.delete('/weights/:id', requireAuth, (req, res) => {
+app.delete('/weights/:id', (req, res) => {
   const weightId = req.params.id;
-  const userId = req.user.id;
+  const userId = 'demo-user';
 
   db.run(
     `DELETE FROM weights WHERE id = ? AND user_id = ?`,
@@ -286,15 +286,16 @@ app.delete('/weights/:id', requireAuth, (req, res) => {
   );
 });
 
-app.post('/calories', requireAuth, (req, res) => {
-  const { food_name, calories } = req.body;
-  const today = todayString();
-  const userId = req.user.id;
+app.post('/calories', (req, res) => {
+  const { food_name, calories, date } = req.body;  
+  const finalDate = date || todayString();          
+
+  const userId = 'demo-user';
 
   db.run(
     `INSERT INTO calories (user_id, food_name, calories, date)
      VALUES (?, ?, ?, ?)`,
-    [userId, food_name, calories, today],
+    [userId, food_name, calories, finalDate],
     function (err) {
       if (err) return res.status(500).json({ error: 'Database error' });
 
@@ -305,9 +306,9 @@ app.post('/calories', requireAuth, (req, res) => {
 
 
 
-app.get('/calories', requireAuth, (req, res) => {
+app.get('/calories', (req, res) => {
   const { date } = req.query;
-  const userId = req.user.id;
+  const userId = 'demo-user';
 
   let sql = `SELECT * FROM calories WHERE user_id = ?`;
   const params = [userId];
@@ -325,9 +326,9 @@ app.get('/calories', requireAuth, (req, res) => {
   });
 });
 
-app.delete('/calories/:id', requireAuth, (req, res) => {
+app.delete('/calories/:id',  (req, res) => {
   const entryId = req.params.id;
-  const userId = req.user.id;
+  const userId = 'demo-user';
 
   db.run(
     `DELETE FROM calories WHERE id = ? AND user_id = ?`,
@@ -343,6 +344,37 @@ app.delete('/calories/:id', requireAuth, (req, res) => {
       }
 
       res.json({ message: 'Calorie entry deleted successfully' });
+    }
+  );
+});
+
+app.put('/calories/:id', (req, res) => {
+  const entryId = req.params.id;
+  const { food_name, calories, date } = req.body;
+  const userId = 'demo-user';
+
+  if (!food_name || calories == null) {
+    return res.status(400).json({ error: 'Missing fields' });
+  }
+
+  const finalDate = date || todayString();
+
+  db.run(
+    `UPDATE calories 
+     SET food_name = ?, calories = ?, date = ?
+     WHERE id = ? AND user_id = ?`,
+    [food_name, calories, finalDate, entryId, userId],
+    function (err) {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+
+      if (this.changes === 0) {
+        return res.status(404).json({ error: 'Entry not found' });
+      }
+
+      res.json({ message: 'Updated successfully' });
     }
   );
 });
@@ -388,11 +420,12 @@ app.get('/search/:fdcid', async (req, res) => {       //Searching for individual
 });
 
 
-app.post('/meals', requireAuth, (req, res) => {
+app.post('/meals', (req, res) => {
   const { meal_name, meal_type, calories, protein, carbs, fats } = req.body;
 
-  const today = todayString();
-  const userId = req.user.id;
+  const finalDate = date || todayString();
+  const userId = 'demo-user';
+
 
   if (!meal_name || !meal_type) {
     return res.status(400).json({ error: 'meal_name and meal_type are required' });
@@ -400,7 +433,7 @@ app.post('/meals', requireAuth, (req, res) => {
 
   db.run(
     `INSERT INTO meals 
-     (user_id, meal_name, meal_type, calories, protein, carbs, fats, date)
+     (user_id, meal_name, meal_type, calories, finalDate)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       userId,
@@ -427,9 +460,9 @@ app.post('/meals', requireAuth, (req, res) => {
 });
 
 
-app.get('/meals', requireAuth, (req, res) => {
+app.get('/meals',  (req, res) => {
   const { date, meal_type } = req.query;
-  const userId = req.user.id;
+  const userId = 'demo-user';
 
   let sql = `SELECT * FROM meals WHERE user_id = ?`;
   const params = [userId];
@@ -456,9 +489,9 @@ app.get('/meals', requireAuth, (req, res) => {
   });
 });
 
-app.delete('/meals/:id', requireAuth, (req, res) => {
+app.delete('/meals/:id', (req, res) => {
   const mealId = req.params.id;
-  const userId = req.user.id;
+  const userId = 'demo-user';
 
   db.run(
     `DELETE FROM meals WHERE id = ? AND user_id = ?`,
