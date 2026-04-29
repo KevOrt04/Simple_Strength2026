@@ -11,6 +11,8 @@ const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const app = express();
 const PORT = process.env.PORT || 3000;
 const API_KEY = process.env.USDA_API_KEY;
+// check for valid API
+console.log("USDA API key loaded:", API_KEY ? "yes" : "no");
 const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || 'http://localhost:5173';
 
 // Middleware
@@ -84,6 +86,15 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 // Create calories and meal table if it doesn't exist
 db.serialize(() => {
 
+  // Enable foreign key constraints for data integrity; deals with deleted records in tables
+  db.run('PRAGMA foreign_keys = ON', [], function(err) {
+    if (err) {
+      console.error('Error enabling foreign keys:', err);
+    } else {
+      console.log('Foreign key constraints enabled');
+    }
+  });
+
   db.run(`
   CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
@@ -125,6 +136,28 @@ db.run(`
     date TEXT NOT NULL
   )
 `);
+
+// added local cached database
+db.run(`
+  CREATE TABLE IF NOT EXISTS cached (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    fdc_id INTEGER UNIQUE,
+    food_name TEXT NOT NULL,
+    calories REAL DEFAULT 0,
+    protein REAL DEFAULT 0,
+    carbs REAL DEFAULT 0,
+    fats REAL DEFAULT 0,
+    serving_size TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  )
+`);
+
+// lookup and date filtering
+db.run(`CREATE INDEX IF NOT EXISTS idx_weights_user_date ON weights(user_id, date)`);
+db.run(`CREATE INDEX IF NOT EXISTS idx_calories_user_date ON calories(user_id, date)`);
+db.run(`CREATE INDEX IF NOT EXISTS idx_meals_user_date ON meals(user_id, date)`);
+db.run(`CREATE INDEX IF NOT EXISTS idx_cached_fdc_id ON cached(fdc_id)`);
+
 });
 
 // Routes
@@ -133,6 +166,34 @@ function todayString() {
   return new Intl.DateTimeFormat('en-CA').format(new Date()); 
   // 'en-CA' uses the YYYY-MM-DD format
 }
+
+// grab nutrition values from USDA 
+function getNutrient(food, nutrientName) {
+  const nutrient = food.foodNutrients?.find(n =>
+    n.nutrient?.name?.toLowerCase().includes(nutrientName.toLowerCase()) ||
+    n.nutrientName?.toLowerCase().includes(nutrientName.toLowerCase())
+  );
+
+  return nutrient
+    ? nutrient.amount || nutrient.value || 0
+    : 0;
+}
+
+// grab cached foods
+app.get('/cached', requireAuth, (req, res) => {
+  db.all(
+    `SELECT * FROM cached ORDER BY food_name ASC`,
+    [],
+    (err, rows) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+
+      res.json(rows);
+    }
+  );
+});
 
 
 app.get('/', (req, res) => {
@@ -210,8 +271,12 @@ app.post('/weights', (req, res) => {
   const today = todayString();
   const userId = 'demo-user';
 
-  if (weight == null) {
-    return res.status(400).json({ error: 'weight is required' });
+  if (weight == null || isNaN(weight) || weight <= 0) {
+    return res.status(400).json({ error: 'weight must be a positive number' });
+  }
+
+  if (unit && !['lbs', 'kg'].includes(unit)) {
+    return res.status(400).json({ error: 'unit must be lbs or kg' });
   }
 
   db.run(
@@ -243,6 +308,10 @@ app.post('/weights', (req, res) => {
 app.get('/weights', (req, res) => {
   const { date } = req.query;
   const userId = 'demo-user';
+
+  if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return res.status(400).json({ error: 'date must be in YYYY-MM-DD format' });
+  }
 
   let sql = `SELECT * FROM weights WHERE user_id = ?`;
   const params = [userId];
@@ -292,6 +361,14 @@ app.post('/calories', (req, res) => {
 
   const userId = 'demo-user';
 
+  if (!food_name || typeof food_name !== 'string' || food_name.trim() === '') {
+    return res.status(400).json({ error: 'food_name is required and must be a non-empty string' });
+  }
+
+  if (calories == null || isNaN(calories) || calories < 0) {
+    return res.status(400).json({ error: 'calories must be a non-negative number' });
+  }
+
   db.run(
     `INSERT INTO calories (user_id, food_name, calories, date)
      VALUES (?, ?, ?, ?)`,
@@ -309,6 +386,10 @@ app.post('/calories', (req, res) => {
 app.get('/calories', (req, res) => {
   const { date } = req.query;
   const userId = 'demo-user';
+
+  if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return res.status(400).json({ error: 'date must be in YYYY-MM-DD format' });
+  }
 
   let sql = `SELECT * FROM calories WHERE user_id = ?`;
   const params = [userId];
@@ -427,9 +508,26 @@ app.post('/meals', (req, res) => {
   const userId = 'demo-user';
 
 
-  if (!meal_name || !meal_type) {
-    return res.status(400).json({ error: 'meal_name and meal_type are required' });
+  if (!meal_name || typeof meal_name !== 'string' || meal_name.trim() === '') {
+    return res.status(400).json({ error: 'meal_name is required and must be a non-empty string' });
   }
+
+  if (!meal_type || typeof meal_type !== 'string' || meal_type.trim() === '') {
+    return res.status(400).json({ error: 'meal_type is required and must be a non-empty string' });
+  }
+
+  // Validate optional numeric fields
+  const validateNumber = (value, fieldName) => {
+    if (value != null && (isNaN(value) || value < 0)) {
+      return res.status(400).json({ error: `${fieldName} must be a non-negative number` });
+    }
+    return true;
+  };
+
+  if (!validateNumber(calories, 'calories')) return;
+  if (!validateNumber(protein, 'protein')) return;
+  if (!validateNumber(carbs, 'carbs')) return;
+  if (!validateNumber(fats, 'fats')) return;
 
   db.run(
     `INSERT INTO meals 
@@ -463,6 +561,10 @@ app.post('/meals', (req, res) => {
 app.get('/meals',  (req, res) => {
   const { date, meal_type } = req.query;
   const userId = 'demo-user';
+
+  if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return res.status(400).json({ error: 'date must be in YYYY-MM-DD format' });
+  }
 
   let sql = `SELECT * FROM meals WHERE user_id = ?`;
   const params = [userId];
@@ -507,6 +609,244 @@ app.delete('/meals/:id', (req, res) => {
       }
 
       res.json({ message: 'Meal deleted successfully' });
+    }
+  );
+});
+
+// GET meals summary
+app.get('/meals/summary', requireAuth, (req, res) => {
+  const userId = req.user.id;
+  const date = req.query.date || todayString();
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return res.status(400).json({ error: 'date must be in YYYY-MM-DD format' });
+  }
+
+  db.get(
+    `SELECT 
+       COALESCE(SUM(calories), 0) AS total_calories,
+       COALESCE(SUM(protein), 0) AS total_protein,
+       COALESCE(SUM(carbs), 0) AS total_carbs,
+       COALESCE(SUM(fats), 0) AS total_fats
+     FROM meals
+     WHERE user_id = ?
+     AND date = ?`,
+    [userId, date],
+    (err, row) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+
+      res.json(row);
+    }
+  );
+});
+
+
+// saves user selected USDA food into cached
+app.post('/cached/save-usda', requireAuth, async (req, res) => {
+  try {
+    const { fdcId } = req.body;
+
+    if (!fdcId) {
+      return res.status(400).json({ error: 'fdcId is required' });
+    }
+
+    const response = await axios.get(`https://api.nal.usda.gov/fdc/v1/food/${fdcId}`, {
+      params: { api_key: API_KEY }
+    });
+
+    const food = response.data;
+
+    const calories = getNutrient(food, 'Energy');
+    const protein = getNutrient(food, 'Protein');
+    const carbs = getNutrient(food, 'Carbohydrate');
+    const fats = getNutrient(food, 'fat');
+
+    const servingSize = food.servingSize
+      ? `${food.servingSize} ${food.servingSizeUnit || ''}`
+      : null;
+
+    db.run(
+      `INSERT OR IGNORE INTO cached 
+       (fdc_id, food_name, calories, protein, carbs, fats, serving_size)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        food.fdcId,
+        food.description,
+        calories,
+        protein,
+        carbs,
+        fats,
+        servingSize
+      ],
+      function (err) {
+        if (err) {
+          console.error(err);
+          return res.status(500).json({ error: 'Database error' });
+        }
+
+        db.get(
+          `SELECT * FROM cached WHERE fdc_id = ?`,
+          [fdcId],
+          (err, row) => {
+            if (err) {
+              console.error(err);
+              return res.status(500).json({ error: 'Database error' });
+            }
+
+            res.json({
+              message: 'USDA food saved to cache successfully',
+              cachedFood: row
+            });
+          }
+        );
+      }
+    );
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ error: 'Failed to save USDA food' });
+  }
+});
+
+// takes cached food and logs it into 'meals' table
+app.post('/meals/from-cached/:cachedId', requireAuth, (req, res) => {
+  const cachedId = req.params.cachedId;
+  const { meal_type, servings, date } = req.body;
+
+  const userId = req.user.id;
+  const logDate = date || todayString();
+  const servingAmount = servings || 1;
+
+  if (!meal_type || typeof meal_type !== 'string' || meal_type.trim() === '') {
+    return res.status(400).json({ error: 'meal_type is required and must be a non-empty string' });
+  }
+
+  if (servingAmount != null && (isNaN(servingAmount) || servingAmount <= 0)) {
+    return res.status(400).json({ error: 'servings must be a positive number' });
+  }
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(logDate)) {
+    return res.status(400).json({ error: 'date must be in YYYY-MM-DD format' });
+  }
+
+  db.get(
+    `SELECT * FROM cached WHERE id = ?`,
+    [cachedId],
+    (err, food) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+
+      if (!food) {
+        return res.status(404).json({ error: 'Cached food not found' });
+      }
+
+      db.run(
+        `INSERT INTO meals 
+         (user_id, meal_name, meal_type, calories, protein, carbs, fats, date)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          userId,
+          food.food_name,
+          meal_type,
+          food.calories * servingAmount,
+          food.protein * servingAmount,
+          food.carbs * servingAmount,
+          food.fats * servingAmount,
+          logDate
+        ],
+        function (err) {
+          if (err) {
+            console.error(err);
+            return res.status(500).json({ error: 'Database error' });
+          }
+
+          res.json({
+            message: 'Cached food logged as meal successfully',
+            mealId: this.lastID
+          });
+        }
+      );
+    }
+  );
+});
+
+// UPDATE meal inputs
+app.put('/meals/:id', requireAuth, (req, res) => {
+  const mealId = req.params.id;
+  const userId = req.user.id;
+
+  const {
+    meal_name,
+    meal_type,
+    calories,
+    protein,
+    carbs,
+    fats,
+    date
+  } = req.body;
+
+  if (!meal_name || typeof meal_name !== 'string' || meal_name.trim() === '') {
+    return res.status(400).json({ error: 'meal_name is required and must be a non-empty string' });
+  }
+
+  if (!meal_type || typeof meal_type !== 'string' || meal_type.trim() === '') {
+    return res.status(400).json({ error: 'meal_type is required and must be a non-empty string' });
+  }
+
+  if (!date || typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return res.status(400).json({ error: 'date is required and must be in YYYY-MM-DD format' });
+  }
+
+  // Validate optional numeric fields
+  const validateNumber = (value, fieldName) => {
+    if (value != null && (isNaN(value) || value < 0)) {
+      return res.status(400).json({ error: `${fieldName} must be a non-negative number` });
+    }
+    return true;
+  };
+
+  if (!validateNumber(calories, 'calories')) return;
+  if (!validateNumber(protein, 'protein')) return;
+  if (!validateNumber(carbs, 'carbs')) return;
+  if (!validateNumber(fats, 'fats')) return;
+
+  db.run(
+    `UPDATE meals
+     SET meal_name = ?,
+         meal_type = ?,
+         calories = ?,
+         protein = ?,
+         carbs = ?,
+         fats = ?,
+         date = ?
+     WHERE id = ?
+     AND user_id = ?`,
+    [
+      meal_name,
+      meal_type,
+      calories ?? null,
+      protein ?? null,
+      carbs ?? null,
+      fats ?? null,
+      date,
+      mealId,
+      userId
+    ],
+    function (err) {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+
+      if (this.changes === 0) {
+        return res.status(404).json({ error: 'Meal not found' });
+      }
+
+      res.json({ message: 'Meal updated successfully' });
     }
   );
 });
