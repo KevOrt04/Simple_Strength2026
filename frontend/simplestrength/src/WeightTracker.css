@@ -14,12 +14,32 @@
   border: 1px solid #ccc;
 }
 
+
+
 /* Date input (keep native behavior) */
 .input-row input[type="date"] {
   width: 100%;
   padding: 10px;
   border-radius: 10px;
   border: 1px solid #ccc;
+  cursor: pointer;
+}
+/* Dark date input */
+.input-row input[type="date"] {
+  width: 100%;
+  padding: 10px;
+  border-radius: 10px;
+  border: none;
+
+  background-color: #1f2937; /* dark */
+  color: #ffffff;            /* white text */
+
+  cursor: pointer;
+}
+
+/* Fix calendar icon (make it white) */
+.input-row input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: brightness(0) invert(1);
   cursor: pointer;
 }
 

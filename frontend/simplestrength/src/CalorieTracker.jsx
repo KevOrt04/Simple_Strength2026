@@ -156,6 +156,7 @@ function CalorieTracker() {
 
             {/* Inputs */}
             <div className="input-row">
+              
               <input
                 type="text"
                 placeholder="Food name"
@@ -163,6 +164,7 @@ function CalorieTracker() {
                 onChange={(e) => {
                   setFood(e.target.value);
                   setError("");
+                  
                 }}
               />
 
