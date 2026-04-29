@@ -384,24 +384,20 @@ app.post('/calories', (req, res) => {
 
 
 app.get('/calories', (req, res) => {
-  const { date } = req.query;
+  let { date } = req.query;
   const userId = 'demo-user';
 
-  if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    return res.status(400).json({ error: 'date must be in YYYY-MM-DD format' });
+  // 🔥 fallback if empty or missing
+  if (!date) {
+    date = new Date().toISOString().split("T")[0];
   }
 
-  let sql = `SELECT * FROM calories WHERE user_id = ?`;
-  const params = [userId];
+  const sql = `
+    SELECT * FROM calories 
+    WHERE user_id = ? AND date = ?
+  `;
 
-  if (date) {
-    sql += ` AND date = ?`;
-    params.push(date);
-  }
-
-  sql += ` ORDER BY date DESC, id DESC`;
-
-  db.all(sql, params, (err, rows) => {
+  db.all(sql, [userId, date], (err, rows) => {
     if (err) return res.status(500).json({ error: 'Database error' });
     res.json(rows);
   });

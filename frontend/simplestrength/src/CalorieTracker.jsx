@@ -1,6 +1,5 @@
-import { useState , useEffect} from "react";
+import { useState, useEffect } from "react";
 import "./CalorieTracker.css";
-
 
 function CalorieTracker() {
 
@@ -11,10 +10,9 @@ function CalorieTracker() {
   };
 
   const formatDate = (dateStr) => {
-  const [year, month, day] = dateStr.split("-");
-  return `${month}/${day}/${year}`;
-};
-
+    const [year, month, day] = dateStr.split("-");
+    return `${month}/${day}/${year}`;
+  };
 
   const [editId, setEditId] = useState(null);
   const [food, setFood] = useState("");
@@ -23,49 +21,50 @@ function CalorieTracker() {
   const [error, setError] = useState("");
   const [selectedDate, setSelectedDate] = useState(getLocalDate());
 
-    
- 
+  const totalCalories = entries.reduce((sum, entry) => {
+    return sum + Number(entry.calories);
+  }, 0);
 
- const totalCalories = entries.reduce((sum, entry) => {
-  return sum + Number(entry.calories);
-}, 0);
 
-  // TOTAL (must use filtered)
   const fetchEntries = async () => {
-  try {
-    const res = await fetch(
-      `http://localhost:3000/calories?date=${selectedDate}`
-    );
+    try {
+      const activeDate = selectedDate || getLocalDate();
 
-    if (!res.ok) {
-      console.error("Server error while fetching entries");
-      setError("Server error occurred");
-      return;
+      const res = await fetch(
+        `http://localhost:3000/calories?date=${activeDate}`
+      );
+
+      if (!res.ok) {
+        let errMsg = "Server error";
+        try {
+          const errData = await res.json();
+          errMsg = errData.error;
+        } catch {}
+        setError(errMsg);
+        return;
+      }
+
+      const data = await res.json();
+      setEntries(data);
+      setError("");
+
+    } catch (err) {
+      console.error("Network error while fetching entries:", err);
+      setError("Cannot connect to server");
     }
+  };
 
-    const data = await res.json();
-    setEntries(data);
-    setError("");
-
-  } catch (err) {
-    console.error("Network error while fetching entries:", err);
-    setError("Cannot connect to server");
-  }
-};
-
-  //RUN on load 
   useEffect(() => {
-  fetchEntries();
-}, [selectedDate]);   
+    fetchEntries();
+  }, [selectedDate]);
 
-
-  //POST data
+  // POST / PUT
   const handleSubmit = async () => {
-     //input validation
     if (!food.trim()) {
       setError("Food name is required");
       return;
     }
+
     if (!/^[a-zA-Z\s]+$/.test(food)) {
       setError("Food name must contain only letters");
       return;
@@ -76,169 +75,175 @@ function CalorieTracker() {
       return;
     }
 
-    if (Number(calories) <= 0 || Number(calories) > 2000){
+    if (Number(calories) <= 0 || Number(calories) > 2000) {
       setError("Calories must be between 1 and 2000");
       return;
     }
 
-    
-    try{
-    const url = editId
-      ? `http://localhost:3000/calories/${editId}`
-      : "http://localhost:3000/calories";
-    const method = editId ? "PUT" : "POST";
-    
-    const res = await fetch(url, {
-    method,
-    headers: {
-      "Content-Type": "application/json"
-    },
+    try {
+      const url = editId
+        ? `http://localhost:3000/calories/${editId}`
+        : "http://localhost:3000/calories";
 
-    body: JSON.stringify({
-      food_name: food,
-      calories: Number(calories),
-      date: selectedDate
-    })
-  });
-  
-  if(!res.ok){
-   const errData = await res.json();
-   setError(errData.error || "Server error");
-    return;
-  }
+      const method = editId ? "PUT" : "POST";
 
-  const result = await res.json(); //  wait for backend response
-  
+      const res = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          food_name: food,
+          calories: Number(calories),
+          date: selectedDate
+        })
+      });
 
-  await fetchEntries(); // ensure this waits
+      if (!res.ok) {
+        let errMsg = "Server error";
+        try {
+          const errData = await res.json();
+          errMsg = errData.error;
+        } catch {}
+        setError(errMsg);
+        return;
+      }
 
-  setFood("");      //clear input
-  setCalories("");
-  setEditId(null);
+      await res.json();
+      await fetchEntries();
 
-} catch (err){
-   console.error("Network error while adding entry:", err);
-   setError("Cannot connect to server");
-}
-  }; //this closes handle submit
+      setFood("");
+      setCalories("");
+      setEditId(null);
 
-  //to delete user inputs
-  const handleDelete = async (id) => {
-  try {
-    const res = await fetch(`http://localhost:3000/calories/${id}`, {
-      method: "DELETE"
-    });
-
-    if (!res.ok) {
-      console.error("Failed to delete");
-      return;
+    } catch (err) {
+      console.error("Network error while adding entry:", err);
+      setError("Cannot connect to server");
     }
+  };
 
-    await fetchEntries();
-  } catch (err) {
-    console.error("Delete error:", err);
-  }
-};
-const handleEdit = (entry) => {
-  setFood(entry.food_name);
-  setCalories(entry.calories);
-  setEditId(entry.id);
-};
+  // DELETE
+  const handleDelete = async (id) => {
+    try {
+      const res = await fetch(`http://localhost:3000/calories/${id}`, {
+        method: "DELETE"
+      });
 
-return (
-  <div className="calorie-tracker">
-    <div className="page">
-      <div className="container">
-        <div className="card">
+      if (!res.ok) {
+        console.error("Failed to delete");
+        return;
+      }
 
-          <h2>Calorie Tracker</h2>
+      await fetchEntries();
+    } catch (err) {
+      console.error("Delete error:", err);
+    }
+  };
 
-          {/* Inputs */}
-          <div className="input-row">
-            <input
-              type="text"
-              placeholder="Food name"
-              value={food}
-              onChange={(e) => {
-                setFood(e.target.value);
-                setError("");
-              }}
-            />
+  const handleEdit = (entry) => {
+    setFood(entry.food_name);
+    setCalories(entry.calories);
+    setEditId(entry.id);
+  };
 
-            <input
-              type="number"
-              placeholder="Calories"
-              value={calories}
-              onChange={(e) => {
-                setCalories(e.target.value);
-                setError("");
-              }}
-            />
-          </div>
+  return (
+    <div className="calorie-tracker">
+      <div className="page">
+        <div className="container">
+          <div className="card">
 
-          <button className="add-btn" onClick={handleSubmit}>
-            {editId ? "Update" : "Add"}
-          </button>
+            <h2>Calorie Tracker</h2>
 
-          {/* Error */}
-          {error && <p className="error">{error}</p>}
+            {/* Inputs */}
+            <div className="input-row">
+              <input
+                type="text"
+                placeholder="Food name"
+                value={food}
+                onChange={(e) => {
+                  setFood(e.target.value);
+                  setError("");
+                }}
+              />
 
-          {/* Total */}
-          <div className="total-section">
-            <div className="total-circle">
-              <p className="total-label">Your Calories</p>
-              <h1 className="total-value">{totalCalories}</h1>
-              <span className="kcal">kcal</span>
+              <input
+                type="number"
+                placeholder="Calories"
+                value={calories}
+                onChange={(e) => {
+                  setCalories(e.target.value);
+                  setError("");
+                }}
+              />
             </div>
-          </div>
 
-          {/* Date */}
-          <div className="date-section">
-            <label>Select Date:</label>
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-            />
-          </div>
+            <button className="add-btn" onClick={handleSubmit}>
+              {editId ? "Update" : "Add"}
+            </button>
 
-          {/* Entries */}
-          <div className="entries">
-            {entries.length === 0 && (
-              <p style={{ color: "#777", marginTop: "10px" }}>
-                No entries for this day
-              </p>
-            )}
+            {/* Error */}
+            {error && <p className="error">{error}</p>}
 
-            {entries.map((entry) => (
-              <div key={entry.id} className="entry">
-                <span>
-                  {entry.food_name} - {entry.calories} - {formatDate(entry.date)}
-                </span>
-
-                <div className="actions">
-                  <button
-                    className="delete-btn"
-                    onClick={() => handleDelete(entry.id)}
-                  >
-                    Delete
-                  </button>
-                  <button
-                    className="edit-btn"
-                    onClick={() => handleEdit(entry)}
-                  >
-                    Edit
-                  </button>
-                </div>
+            {/* Total */}
+            <div className="total-section">
+              <div className="total-circle">
+                <p className="total-label">Your Calories</p>
+                <h1 className="total-value">{totalCalories}</h1>
+                <span className="kcal">kcal</span>
               </div>
-            ))}
-          </div>
+            </div>
 
+            {/* Date */}
+            <div className="date-section">
+              <label>Select Date:</label>
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setSelectedDate(value || getLocalDate());
+                }}
+              />
+            </div> 
+
+            {/* Entries */}
+            <div className="entries">
+              {entries.length === 0 && (
+                <p style={{ color: "#777", marginTop: "10px" }}>
+                  No entries for this day
+                </p>
+              )}
+
+              {entries.map((entry) => (
+                <div key={entry.id} className="entry">
+                  <span>
+                    {entry.food_name} - {entry.calories} - {formatDate(entry.date)}
+                  </span>
+
+                  <div className="actions">
+                    <button
+                      className="delete-btn"
+                      onClick={() => handleDelete(entry.id)}
+                    >
+                      Delete
+                    </button>
+
+                    <button
+                      className="edit-btn"
+                      onClick={() => handleEdit(entry)}
+                    >
+                      Edit
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+          </div>
         </div>
       </div>
     </div>
-  </div>
-);
+  );
 }
 
 export default CalorieTracker;
