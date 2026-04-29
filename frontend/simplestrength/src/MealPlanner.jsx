@@ -68,25 +68,32 @@ function MealPlanner() {
 
       {error && <p style={{ color: "red" }}>{error}</p>}
 
-      <div className="input-row">
-        <label>Fitness Goal:</label>
-        <select value={goal} onChange={(e) => setGoal(e.target.value)}>
-          <option value="weight_loss">Weight Loss</option>
-          <option value="muscle_gain">Muscle Gain</option>
-        </select>
+      <div className="meal-form">
+  <div className="field">
+    <label>Fitness Goal:</label>
+    <select value={goal} onChange={(e) => setGoal(e.target.value)}>
+      <option value="weight_loss">Weight Loss</option>
+      <option value="muscle_gain">Muscle Gain</option>
+    </select>
+  </div>
 
-        <label>Dietary Preference:</label>
-        <select value={diet} onChange={(e) => setDiet(e.target.value)}>
-          <option value="none">None</option>
-          <option value="vegetarian">Vegetarian</option>
-          <option value="vegan">Vegan</option>
-        </select>
+  <div className="field">
+    <label>Dietary Preference:</label>
+    <select value={diet} onChange={(e) => setDiet(e.target.value)}>
+      <option value="none">None</option>
+      <option value="vegetarian">Vegetarian</option>
+      <option value="vegan">Vegan</option>
+    </select>
+  </div>
 
-        <button className="Getsuggest-btn" onClick={handleGenerate} disabled={loading}>
-          {loading ? "Generating..." : "Get Suggestions"}
-        </button>
-
-      </div>
+  <button
+    className="Getsuggest-btn"
+    onClick={handleGenerate}
+    disabled={loading}
+  >
+    {loading ? "Generating..." : "Get Suggestions"}
+  </button>
+</div>
 
         <h3>
           Suggested Meals for{" "}
