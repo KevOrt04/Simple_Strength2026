@@ -142,7 +142,6 @@ function CalorieTracker() {
 const handleEdit = (entry) => {
   setFood(entry.food_name);
   setCalories(entry.calories);
-  setSelectedDate(entry.date);
   setEditId(entry.id);
 };
 
