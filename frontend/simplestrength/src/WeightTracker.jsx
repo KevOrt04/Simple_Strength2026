@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from "react";
 import "./WeightTracker.css";
+import BackButton from "./BackButton";
 
 function WeightTracker() {
   // Get user's date
@@ -14,6 +15,7 @@ function WeightTracker() {
   const [entries, setEntries] = useState([]);
   const [editId, setEditId] = useState(null);
   const [weight, setWeight] = useState("");
+  const [error, setError] = useState("");
   
 
   // GET data
@@ -36,10 +38,18 @@ const res = await fetch(
   }, [date]);
 
   // POST data 
-  const handleSubmit = async () => {
-  // Input Validation
-  if (!Number.isInteger(Number(weight)) || Number(weight) <= 0) {
-    alert("Make sure you enter a proper integer value for weights");
+const handleSubmit = async () => {
+  setError(""); // clear previous error
+
+  // 1. Empty input
+  if (!weight) {
+    setError("Weight is required");
+    return;
+  }
+
+  // 3. Less than or equal to 0
+  if (Number(weight) <= 0) {
+    setError("Weight must be greater than 0");
     return;
   }
 
@@ -86,13 +96,16 @@ const res = await fetch(
   }
 
   setWeight("");
+  setError("");
 };
 
   const handleEdit = (entry) => {
   setWeight(String(entry.weight));
   setDate(entry.date);
   setEditId(entry.id);
-};
+}
+
+
 
   // remove entry from local state
   const handleDelete = async (id) => {
@@ -122,8 +135,9 @@ const filteredEntries = entries.filter((entry) => {
   return (
   <div className="container">
     <div className="card">
-      <h2>Weight Tracker</h2>
-
+      <BackButton />
+      <h2>⚖️ Weight Tracker</h2>
+    
       {/* Inputs side-by-side */}
       <div
         className="input-row"
@@ -182,8 +196,10 @@ const filteredEntries = entries.filter((entry) => {
         }}
       >
         {editId !== null ? "Save" : "Add"}
+        
       </button>
-
+      {error && <p style={{ color: "red" }}>{error}</p>}
+            
       <div className="entries">
          {filteredEntries.length === 0 && (
     <p style={{ color: "#777", marginTop: "10px" }}>

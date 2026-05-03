@@ -1,5 +1,7 @@
 import { useState } from "react";
 import "./MealPlanner.css";
+import BackButton from "./BackButton";
+
 
 function MealPlanner() {
   const [goal, setGoal] = useState("weight_loss");
@@ -11,6 +13,7 @@ function MealPlanner() {
   const handleGenerate = async () => {
     setLoading(true);
     setMeals([]);
+    setError("");
 
     try {
       const res = await fetch("http://localhost:3000/mealplan", {
@@ -23,6 +26,10 @@ function MealPlanner() {
 
       const data = await res.json();
 
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to generate meals");
+      }
+
       setTimeout(() => {
         setMeals(data.meals);
         setLoading(false);
@@ -34,37 +41,11 @@ function MealPlanner() {
     }
   };
 
-  // NEW FUNCTION
-  const handleAddMeal = async (meal) => {
-    const confirmAdd = window.confirm(
-      `Add "${meal}" to your calorie tracker?`
-    );
-
-    if (!confirmAdd) return;
-
-    try {
-      await fetch("http://localhost:3000/calories", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          food_name: meal,
-          calories: 500 // temporary default
-        })
-      });
-
-      alert(`${meal} added to tracker`);
-    } catch (err) {
-      console.error(err);
-      setError("Failed to add meal");
-    }
-  };
-
   return (
       <div className="container">
         <div className="card">
-      <h2>Meal Planner</h2>
+          <BackButton />
+      <h2>🍽️ Meal Planner</h2>
 
       {error && <p style={{ color: "red" }}>{error}</p>}
 
@@ -120,7 +101,7 @@ function MealPlanner() {
                 alignItems: "center"
               }}
             >
-              <span>{meal}</span>
+              <span>🥗{meal}</span>
 
              
               </div>

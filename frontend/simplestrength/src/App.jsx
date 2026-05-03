@@ -4,16 +4,65 @@ import CalorieTracker from "./CalorieTracker";
 import MealPlanner from "./MealPlanner";
 import WorkoutCreator from "./WorkoutCreator";
 import HomePage from "./HomePage";
+import Login from "./Login";
+import ProtectedRoute from "./ProtectedRoute";
 
 function App() {
   return (
     <Routes>
-      <Route path="/" element={<HomePage />} />
-      <Route path="/weighttracker" element={<WeightTracker />} />
-      <Route path="/calorietracker" element={<CalorieTracker />} />
-      <Route path="/mealplanner" element={<MealPlanner />} />
-      <Route path="/workoutcreator" element={<WorkoutCreator />} />
-    </Routes>
+  {/* Public routes */}
+  <Route path="/" element={<Login />} />
+  <Route path="/login" element={<Login />} />
+
+  {/* Protected routes */}
+  <Route
+    path="/home"
+    element={
+      <ProtectedRoute>
+        <HomePage />
+      </ProtectedRoute>
+    }
+  />
+
+  <Route
+    path="/calorietracker"
+    element={
+      <ProtectedRoute>
+        <CalorieTracker />
+      </ProtectedRoute>
+    }
+  />
+
+  <Route
+    path="/weighttracker"
+    element={
+      <ProtectedRoute>
+        <WeightTracker />
+      </ProtectedRoute>
+    }
+  />
+
+  <Route
+    path="/mealplanner"
+    element={
+      <ProtectedRoute>
+        <MealPlanner />
+      </ProtectedRoute>
+    }
+  />
+
+  <Route
+    path="/workoutcreator"
+    element={
+      <ProtectedRoute>
+        <WorkoutCreator />
+      </ProtectedRoute>
+    }
+  />
+
+  {/* fallback */}
+  <Route path="*" element={<Login />} />
+</Routes>
   );
 }
 

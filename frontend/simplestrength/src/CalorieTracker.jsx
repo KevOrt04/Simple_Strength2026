@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import "./CalorieTracker.css";
+import BackButton from "./BackButton";
 
 function CalorieTracker() {
 
@@ -149,10 +150,12 @@ function CalorieTracker() {
   return (
     <div className="calorie-tracker">
       <div className="page">
+        <BackButton />
         <div className="container">
           <div className="card">
+            
 
-            <h2>Calorie Tracker</h2>
+            <h2>🔥 Calorie Tracker</h2>
 
             {/* Inputs */}
             <div className="input-row">

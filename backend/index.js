@@ -244,7 +244,7 @@ app.get('/auth/google/callback', (req, res, next) => {
       }
 
       // Redirect back to the frontend after successful login
-      return res.redirect(`${FRONTEND_ORIGIN}/`);
+      return res.redirect(`${FRONTEND_ORIGIN}/home`);
     });
   })(req, res, next);
 });
@@ -872,6 +872,134 @@ app.put('/meals/:id', requireAuth, (req, res) => {
     }
   );
 });
+
+
+const mealSuggestions = {
+  weight_loss: {
+    none: [
+      "Grilled chicken salad",
+      "Turkey lettuce wrap",
+      "Greek yogurt with berries",
+      "Egg white omelet",
+      "Tuna salad bowl",
+      "Chicken quinoa bowl",
+      "Shrimp vegetable stir fry",
+      "Turkey chili",
+      "Baked salmon with veggies",
+      "Lean beef lettuce tacos",
+      "Chicken avocado salad",
+      "Zucchini noodles with chicken",
+      "Cottage cheese with fruit",
+      "Grilled tilapia with greens",
+      "Protein smoothie bowl"
+    ],
+    vegetarian: [
+      "Veggie omelet",
+      "Greek yogurt parfait",
+      "Quinoa vegetable bowl",
+      "Cottage cheese with fruit",
+      "Black bean salad",
+      "Avocado toast with egg",
+      "Lentil salad",
+      "Vegetable stir fry",
+      "Caprese salad",
+      "Chickpea salad",
+      "Spinach feta wrap",
+      "Veggie soup",
+      "Tofu scramble",
+      "Greek salad",
+      "Protein smoothie"
+    ],
+    vegan: [
+      "Tofu stir fry",
+      "Lentil soup",
+      "Chickpea salad",
+      "Vegan smoothie",
+      "Quinoa bowl",
+      "Vegan tacos",
+      "Vegetable curry",
+      "Black bean bowl",
+      "Tofu salad",
+      "Vegan pasta",
+      "Hummus wrap",
+      "Avocado quinoa salad",
+      "Vegan chili",
+      "Roasted veggie bowl",
+      "Peanut tofu noodles"
+    ]
+  },
+
+  muscle_gain: {
+    none: [
+      "Chicken rice bowl",
+      "Steak and potatoes",
+      "Salmon with rice",
+      "Eggs and toast",
+      "Turkey sandwich",
+      "Chicken pasta",
+      "Beef burrito",
+      "Chicken alfredo",
+      "Shrimp rice bowl",
+      "Steak burrito bowl",
+      "Chicken wrap",
+      "Egg burrito",
+      "Salmon pasta",
+      "Beef rice bowl",
+      "Protein pancakes"
+    ],
+    vegetarian: [
+      "Egg and avocado toast",
+      "Protein smoothie",
+      "Greek yogurt bowl",
+      "Cottage cheese bowl",
+      "Bean burrito",
+      "Veggie pasta",
+      "Lentil curry",
+      "Egg fried rice",
+      "Paneer bowl",
+      "Vegetarian chili",
+      "Tofu noodles",
+      "Protein oats",
+      "Cheese quesadilla",
+      "Yogurt parfait",
+      "Peanut butter sandwich"
+    ],
+    vegan: [
+      "Tofu rice bowl",
+      "Lentil pasta",
+      "Peanut butter oatmeal",
+      "Vegan protein shake",
+      "Chickpea curry",
+      "Tofu noodles",
+      "Vegan burrito",
+      "Black bean rice bowl",
+      "Vegan pasta",
+      "Tempeh stir fry",
+      "Vegan chili",
+      "Peanut tofu bowl",
+      "Vegan sandwich",
+      "Oatmeal with nuts",
+      "Protein smoothie"
+    ]
+  }
+};
+
+app.post("/mealplan", (req, res) => {
+  const { goal, diet } = req.body;
+
+  const meals = mealSuggestions[goal]?.[diet];
+
+  if (!meals) {
+    return res.status(404).json({ error: "No meal suggestions found" });
+  }
+
+  // pick random 3 meals
+  const shuffled = [...meals].sort(() => 0.5 - Math.random());
+  const selectedMeals = shuffled.slice(0, 3);
+
+  res.json({ meals: selectedMeals });
+});
+
 
 
 // Start server

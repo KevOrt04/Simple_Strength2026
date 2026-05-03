@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { EXERCISES } from "./exercises";
 import "./WorkoutCreator.css";
+import BackButton from "./BackButton";
 
 const MUSCLE_GROUPS = [
   { id: "chest", label: "Chest" },
@@ -46,7 +47,8 @@ function WorkoutCreator() {
 
   return (
     <div className="wc-container">
-      <h2 className="wc-title">Workout Creator</h2>
+       <BackButton />
+      <h2 className="wc-title">🏋️ Workout Creator</h2>
       <p className="wc-subtitle">Select the muscle groups you want to train today</p>
 
       {/* Muscle Group Selection */}
