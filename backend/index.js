@@ -11,8 +11,7 @@ const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const app = express();
 const PORT = process.env.PORT || 3000;
 const API_KEY = process.env.USDA_API_KEY;
-// check for valid API
-console.log("USDA API key loaded:", API_KEY ? "yes" : "no");
+
 const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || 'http://localhost:5173';
 
 // Middleware

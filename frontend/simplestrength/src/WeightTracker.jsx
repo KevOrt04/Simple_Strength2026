@@ -29,7 +29,7 @@ const res = await fetch(
       const data = await res.json();
       setEntries(data);
     } catch(err) {
-      console.log("GET route not ready yet");
+      
     }
   };
   // RUN on load
@@ -85,18 +85,17 @@ const handleSubmit = async () => {
 
     await res.json();
     await fetchEntries();
-  } catch (err) {
-    console.log("POST route not ready yet");
 
-    // fallback
-    setEntries((prev) => [
-      { id: Date.now(), ...entryData },
-      ...prev
-    ]);
-  }
+    setWeight("");
+    setError("");
 
-  setWeight("");
-  setError("");
+    
+  }catch (err) {
+  console.error("Failed to add weight:", err);
+  setError("Cannot connect to server");
+}
+  
+ 
 };
 
   const handleEdit = (entry) => {

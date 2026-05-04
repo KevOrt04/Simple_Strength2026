@@ -102,8 +102,6 @@ function MealPlanner() {
               }}
             >
               <span>🥗{meal}</span>
-
-             
               </div>
             
           ))

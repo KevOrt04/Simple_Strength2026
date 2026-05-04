@@ -129,7 +129,7 @@ function WorkoutCreator() {
                         <div className="wc-variation-section">
                           <h5 className="wc-variation-heading">Bodyweight Variations</h5>
                           <ul className="wc-variation-list">
-                            {exercise.bodweightVariations.map((v) => (
+                            {exercise.bodyweightVariations?.map((v) => (
                               <li key={v}>{v}</li>
                             ))}
                           </ul>
