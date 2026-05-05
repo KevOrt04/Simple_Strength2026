@@ -381,7 +381,7 @@ app.get('/calories', (req, res) => {
   let { date } = req.query;
   const userId = 'demo-user';
 
-  // 🔥 fallback if empty or missing
+  //  fallback if empty or missing
   if (!date) {
     date = new Date().toISOString().split("T")[0];
   }
