@@ -1,2 +1,2 @@
-# Simple_Strenght2026
+# Simple_Strength2026
 
